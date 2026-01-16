@@ -16,7 +16,7 @@ const NAV_ITEMS = [
 const CONFIG_ITEMS = [
   { label: "Horaires des séances", href: "/configurations/horaires-seances" },
   { label: "Tarifs", href: "/configurations/tarifs" },
-  { label: "Langues", href: "/configurations/langues" },
+  { label: "Versions", href: "/configurations/versions" },
   { label: "Types de spectacle", href: "/configurations/types-spectacle" },
   { label: "Écran d'accueil", href: "/configurations/ecran-accueil" },
   { label: "Affiche cinéma", href: "/configurations/affiche-cinema" },

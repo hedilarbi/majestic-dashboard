@@ -1,9 +1,9 @@
 import "server-only";
 
 import { getAuthContext } from "@/services/api";
-import { normalizeLanguages } from "@/lib/configurations/normalize";
+import { normalizeVersions } from "@/lib/configurations/normalize";
 
-export const getLanguages = async () => {
+export const getVersions = async () => {
   const auth = await getAuthContext();
 
   if (!auth.ok) {
@@ -24,5 +24,5 @@ export const getLanguages = async () => {
     };
   }
 
-  return { items: normalizeLanguages(data), error: "" };
+  return { items: normalizeVersions(data), error: "" };
 };

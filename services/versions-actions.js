@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getAuthContext } from "@/services/api";
 
-
-export async function createLanguage({ name }) {
+export async function createVersion({ name }) {
   const auth = await getAuthContext();
 
   if (!auth.ok) {
@@ -34,11 +33,11 @@ export async function createLanguage({ name }) {
     };
   }
 
-  revalidatePath("/configurations/langues");
+  revalidatePath("/configurations/versions");
   return { ok: true };
 }
 
-export async function updateLanguage({ id, name }) {
+export async function updateVersion({ id, name }) {
   const auth = await getAuthContext();
 
   if (!auth.ok) {
@@ -75,11 +74,11 @@ export async function updateLanguage({ id, name }) {
     };
   }
 
-  revalidatePath("/configurations/langues");
+  revalidatePath("/configurations/versions");
   return { ok: true };
 }
 
-export async function deleteLanguage(id) {
+export async function deleteVersion(id) {
   const auth = await getAuthContext();
 
   if (!auth.ok) {
@@ -110,6 +109,6 @@ export async function deleteLanguage(id) {
     };
   }
 
-  revalidatePath("/configurations/langues");
+  revalidatePath("/configurations/versions");
   return { ok: true };
 }

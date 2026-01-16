@@ -8,13 +8,13 @@ import Modal from "@/components/ui/modal";
 import Toast from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 import {
-  createLanguage,
-  deleteLanguage,
-  updateLanguage,
-} from "@/services/languages-actions";
+  createVersion,
+  deleteVersion,
+  updateVersion,
+} from "@/services/versions-actions";
 
-export default function LanguesClient({
-  initialLanguages = [],
+export default function VersionsClient({
+  initialVersions = [],
   initialError = "",
 }) {
   const router = useRouter();
@@ -33,9 +33,9 @@ export default function LanguesClient({
     setErrorMessage(initialError || "");
   }, [initialError]);
 
-  const sortedLanguages = useMemo(
-    () => [...initialLanguages].sort((a, b) => a.name.localeCompare(b.name)),
-    [initialLanguages]
+  const sortedVersions = useMemo(
+    () => [...initialVersions].sort((a, b) => a.name.localeCompare(b.name)),
+    [initialVersions]
   );
 
   const openCreateModal = () => {
@@ -72,7 +72,7 @@ export default function LanguesClient({
     setIsSaving(true);
 
     try {
-      const result = await createLanguage({ name });
+      const result = await createVersion({ name });
 
       if (!result.ok) {
         const message = result.message || "Création impossible.";
@@ -82,7 +82,7 @@ export default function LanguesClient({
       }
 
       closeFormModals();
-      showToast("Langue créée avec succès.", "success");
+      showToast("Version créée avec succès.", "success");
       router.refresh();
     } catch {
       setFormError("Création impossible.");
@@ -108,7 +108,7 @@ export default function LanguesClient({
     setIsSaving(true);
 
     try {
-      const result = await updateLanguage({
+      const result = await updateVersion({
         id: editingItem.id,
         name,
       });
@@ -119,7 +119,7 @@ export default function LanguesClient({
       }
 
       closeFormModals();
-      showToast("Langue modifiée avec succès.", "success");
+      showToast("Version modifiée avec succès.", "success");
       router.refresh();
     } catch {
       setFormError("Modification impossible.");
@@ -136,7 +136,7 @@ export default function LanguesClient({
     setIsDeleting(true);
 
     try {
-      const result = await deleteLanguage(pendingDelete.id);
+      const result = await deleteVersion(pendingDelete.id);
 
       if (!result.ok) {
         setErrorMessage(result.message || "Suppression impossible.");
@@ -158,10 +158,10 @@ export default function LanguesClient({
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="font-secondary text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
-              Langues
+              Versions
             </h1>
             <p className="text-slate-500 mt-1">
-              Gère les langues disponibles pour les séances.
+              Gère les versions disponibles pour les séances.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -171,7 +171,7 @@ export default function LanguesClient({
               className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
             >
               <Icon name="plus" className="h-5 w-5" />
-              Ajouter une langue
+              Ajouter une version
             </button>
           </div>
         </div>
@@ -186,17 +186,17 @@ export default function LanguesClient({
           <div className="px-6 py-5 border-b border-slate-200 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-secondary text-lg font-semibold text-slate-900">
-                Liste des langues
+                Liste des versions
               </h2>
               <p className="text-sm text-slate-500">
-                {sortedLanguages.length} langues disponibles
+                {sortedVersions.length} versions disponibles
               </p>
             </div>
           </div>
 
-          {sortedLanguages.length === 0 ? (
+          {sortedVersions.length === 0 ? (
             <div className="px-6 py-10 text-sm text-slate-500">
-              Aucune langue pour le moment.
+              Aucune version pour le moment.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -208,7 +208,7 @@ export default function LanguesClient({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 text-slate-600">
-                  {sortedLanguages.map((item) => (
+                  {sortedVersions.map((item) => (
                     <tr
                       key={item.id}
                       className="hover:bg-slate-50 transition-colors"
@@ -246,7 +246,7 @@ export default function LanguesClient({
 
         {isCreateOpen ? (
           <Modal
-            title="Ajouter une langue"
+            title="Ajouter une version"
             description="Renseigne le nom (ex: VO, VOSTFR, VF)."
             onClose={() => (isSaving ? null : closeFormModals())}
           >
@@ -256,7 +256,7 @@ export default function LanguesClient({
                   htmlFor="create-name"
                   className="text-sm font-medium text-slate-700"
                 >
-                  Nom de la langue
+                  Nom de la version
                 </label>
                 <input
                   id="create-name"
@@ -295,8 +295,8 @@ export default function LanguesClient({
 
         {isEditOpen ? (
           <Modal
-            title="Modifier la langue"
-            description="Mets à jour le nom de la langue."
+            title="Modifier la version"
+            description="Mets à jour le nom de la version."
             onClose={() => (isSaving ? null : closeFormModals())}
           >
             <form className="space-y-4" onSubmit={handleUpdate}>
@@ -305,7 +305,7 @@ export default function LanguesClient({
                   htmlFor="edit-name"
                   className="text-sm font-medium text-slate-700"
                 >
-                  Nom de la langue
+                  Nom de la version
                 </label>
                 <input
                   id="edit-name"
@@ -344,7 +344,7 @@ export default function LanguesClient({
 
         {pendingDelete ? (
           <Modal
-            title="Supprimer la langue"
+            title="Supprimer la version"
             description={`Confirmer la suppression de "${pendingDelete.name}" ?`}
             onClose={() => (isDeleting ? null : setPendingDelete(null))}
           >
