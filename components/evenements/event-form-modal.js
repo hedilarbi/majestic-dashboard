@@ -298,22 +298,19 @@ export default function EventFormModal({
                       );
 
                       return (
-                        <label
+                        <button
+                          type="button"
+                          aria-pressed={isActive}
                           key={option.value}
-                          className={`cursor-pointer rounded-xl border px-4 py-2 text-sm font-medium transition ${
+                          onClick={() => onToggleVersion(option.value)}
+                          className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
                             isActive
                               ? "bg-primary text-white border-primary"
                               : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                           }`}
                         >
-                          <input
-                            type="checkbox"
-                            className="sr-only"
-                            checked={isActive}
-                            onChange={() => onToggleVersion(option.value)}
-                          />
                           {option.label}
-                        </label>
+                        </button>
                       );
                     })}
                   </div>
