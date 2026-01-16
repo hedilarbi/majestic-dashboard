@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 
 import { Icon } from "@/components/ui/icons";
 import EventFormModal from "@/components/evenements/event-form-modal";
-import Toast from "@/components/ui/toast";
-import { useToast } from "@/hooks/use-toast";
 import { updateEvent } from "@/services/evenements-actions";
 import {
   GENRE_OPTIONS,
@@ -42,7 +40,6 @@ export default function EventEditTrigger({
   showTypesError = "",
 }) {
   const router = useRouter();
-  const { toast, showToast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formState, setFormState] = useState(() =>
@@ -181,16 +178,13 @@ export default function EventEditTrigger({
       if (!result.ok) {
         const message = result.message || "Modification impossible.";
         setFormError(message);
-        showToast(message, "error");
         return;
       }
 
       closeModal();
-      showToast("Événement modifié avec succès.", "success");
       router.refresh();
     } catch {
       setFormError("Modification impossible.");
-      showToast("Modification impossible.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -227,8 +221,6 @@ export default function EventEditTrigger({
           onSubmit={handleSubmit}
         />
       ) : null}
-
-      <Toast toast={toast} />
     </>
   );
 }

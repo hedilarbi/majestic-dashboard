@@ -16,6 +16,7 @@ export default function SeancesClient({
   initialStatusFilter = "Tous",
   initialDateFrom = "",
   initialDateTo = "",
+  initialOrderBy = "date",
   events = [],
   eventsError = "",
   rooms = [],
@@ -42,9 +43,11 @@ export default function SeancesClient({
     searchParams.get("status") || initialStatusFilter || "Tous";
   const dateFromParam = searchParams.get("from") || initialDateFrom || "";
   const dateToParam = searchParams.get("to") || initialDateTo || "";
+  const orderByParam =
+    searchParams.get("orderBy") || initialOrderBy || "date";
   const filtersKey = useMemo(
-    () => `${statusParam}|${dateFromParam}|${dateToParam}`,
-    [dateFromParam, dateToParam, statusParam]
+    () => `${statusParam}|${dateFromParam}|${dateToParam}|${orderByParam}`,
+    [dateFromParam, dateToParam, orderByParam, statusParam]
   );
 
   const updateSearchParams = (updates) => {
@@ -77,6 +80,15 @@ export default function SeancesClient({
       }
     }
 
+    if (Object.prototype.hasOwnProperty.call(updates, "orderBy")) {
+      const value = updates.orderBy;
+      if (value && value !== "date") {
+        params.set("orderBy", value);
+      } else {
+        params.delete("orderBy");
+      }
+    }
+
     if (Object.prototype.hasOwnProperty.call(updates, "page")) {
       params.set("page", String(updates.page));
     }
@@ -85,11 +97,12 @@ export default function SeancesClient({
     router.push(nextQuery ? `/seances?${nextQuery}` : "/seances");
   };
 
-  const handleApplyFilters = ({ statusFilter, dateFrom, dateTo }) => {
+  const handleApplyFilters = ({ statusFilter, dateFrom, dateTo, orderBy }) => {
     updateSearchParams({
       status: statusFilter,
       from: dateFrom,
       to: dateTo,
+      orderBy,
       page: 1,
     });
   };
@@ -131,6 +144,7 @@ export default function SeancesClient({
         initialDateFrom={dateFromParam}
         initialDateTo={dateToParam}
         initialStatus={statusParam}
+        initialOrderBy={orderByParam}
         onApply={handleApplyFilters}
       />
 

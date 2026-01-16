@@ -5,7 +5,7 @@ import { getEvents, getSessionFormData } from "@/services/evenements";
 
 export default async function SeancesPage({ searchParams }) {
   const resolvedParams = await searchParams;
-  const { page, limit, status, from, to } =
+  const { page, limit, status, from, to, orderBy } =
     parseSessionsSearchParams(resolvedParams);
 
   const [
@@ -20,7 +20,7 @@ export default async function SeancesPage({ searchParams }) {
       pricingError,
     },
   ] = await Promise.all([
-    getSessions({ page, limit, status, from, to }),
+    getSessions({ page, limit, status, from, to, orderBy }),
     getEvents({ page: 1, limit: 200 }),
     getSessionFormData(),
   ]);
@@ -33,6 +33,7 @@ export default async function SeancesPage({ searchParams }) {
       initialStatusFilter={status || "Tous"}
       initialDateFrom={from}
       initialDateTo={to}
+      initialOrderBy={orderBy}
       events={events}
       eventsError={eventsError}
       rooms={rooms}

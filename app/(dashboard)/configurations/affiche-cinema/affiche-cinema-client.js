@@ -47,18 +47,13 @@ function EventSelect({
   const selectedOption = options.find((option) => option.id === value);
 
   useEffect(() => {
-    if (!isOpen) {
-      setQuery("");
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
     const handleOutsideClick = (event) => {
       if (
         containerRef.current &&
         !containerRef.current.contains(event.target)
       ) {
         setIsOpen(false);
+        setQuery("");
       }
     };
 
@@ -69,6 +64,7 @@ function EventSelect({
   const handleSelect = (option) => {
     onChange(option.id);
     setIsOpen(false);
+    setQuery("");
   };
 
   const isDisabled = options.length === 0;
@@ -94,7 +90,13 @@ function EventSelect({
               }
             }
 
-            setIsOpen((open) => !open);
+            setIsOpen((open) => {
+              const nextOpen = !open;
+              if (!nextOpen) {
+                setQuery("");
+              }
+              return nextOpen;
+            });
           }}
           disabled={isDisabled}
           className={`w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm shadow-sm transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 ${

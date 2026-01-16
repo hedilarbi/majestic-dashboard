@@ -8,16 +8,18 @@ export default function SeancesFilters({
   initialDateFrom = "",
   initialDateTo = "",
   initialStatus = "Tous",
+  initialOrderBy = "date",
   onApply,
 }) {
   const [dateFrom, setDateFrom] = useState(initialDateFrom);
   const [dateTo, setDateTo] = useState(initialDateTo);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [orderBy, setOrderBy] = useState(initialOrderBy);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="block text-sm font-medium text-slate-900 mb-2">
               Date de
@@ -57,6 +59,19 @@ export default function SeancesFilters({
               ))}
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-900 mb-2">
+              Trier par
+            </label>
+            <select
+              value={orderBy}
+              onChange={(event) => setOrderBy(event.target.value)}
+              className="block w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="date">Date de séance</option>
+              <option value="createdAt">Date de création</option>
+            </select>
+          </div>
         </div>
         <button
           type="button"
@@ -65,6 +80,7 @@ export default function SeancesFilters({
               statusFilter,
               dateFrom,
               dateTo,
+              orderBy,
             })
           }
           className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"

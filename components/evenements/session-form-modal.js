@@ -15,8 +15,6 @@ import {
   countSeats,
   getCellKey,
 } from "@/lib/configurations/rooms";
-import { useToast } from "@/hooks/use-toast";
-import Toast from "@/components/ui/toast";
 import { createSessions, updateSession } from "@/services/sessions-actions";
 import SessionRoomEditor from "./session-room-editor";
 
@@ -193,7 +191,6 @@ export default function SessionFormModal({
   onClose,
 }) {
   const router = useRouter();
-  const { toast, showToast } = useToast();
   const isEditing = mode === "edit" && Boolean(session);
   const eventOptions = Array.isArray(events) ? events : [];
   const canSelectEvent = allowEventSelection && !isEditing;
@@ -560,25 +557,16 @@ export default function SessionFormModal({
       if (!result.ok) {
         const message = result.message || "Création impossible.";
         setFormError(message);
-        showToast(message, "error");
         return;
       }
 
       if (isEditing) {
-        showToast("Séance mise à jour.", "success");
       } else {
-        showToast(
-          `${
-            result.created || selectedSessionTimes.length
-          } séance(s) créée(s).`,
-          "success"
-        );
       }
       router.refresh();
       onClose();
     } catch {
       setFormError("Création impossible.");
-      showToast("Création impossible.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -647,12 +635,17 @@ export default function SessionFormModal({
                   ))}
                 </div>
               ) : null}
-
-              {formError ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {formError}
+              {formError && (
+                <div
+                  className={`rounded-xl border px-4 py-3 text-sm min-h-[44px] transition ${
+                    formError
+                      ? "border-red-200 bg-red-50 text-red-700"
+                      : "border-transparent bg-transparent text-transparent"
+                  }`}
+                >
+                  {formError || ""}
                 </div>
-              ) : null}
+              )}
 
               <div>
                 {canSelectEvent ? (
@@ -995,7 +988,6 @@ export default function SessionFormModal({
           </form>
         </div>
       </div>
-      <Toast toast={toast} />
     </>
   );
 }

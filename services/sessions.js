@@ -6,7 +6,7 @@ import {
   normalizeSessions,
 } from "@/lib/evenements/normalize";
 
-const buildSessionsQuery = ({ page, limit, status, from, to }) => {
+const buildSessionsQuery = ({ page, limit, status, from, to, orderBy }) => {
   const params = new URLSearchParams();
 
   params.set("page", String(page));
@@ -24,10 +24,14 @@ const buildSessionsQuery = ({ page, limit, status, from, to }) => {
     params.set("to", to);
   }
 
+  if (orderBy) {
+    params.set("orderBy", orderBy);
+  }
+
   return params.toString();
 };
 
-export const getSessions = async ({ page, limit, status, from, to }) => {
+export const getSessions = async ({ page, limit, status, from, to, orderBy }) => {
   const auth = await getAuthContext();
 
   if (!auth.ok) {
@@ -45,7 +49,7 @@ export const getSessions = async ({ page, limit, status, from, to }) => {
     };
   }
 
-  const query = buildSessionsQuery({ page, limit, status, from, to });
+  const query = buildSessionsQuery({ page, limit, status, from, to, orderBy });
   const response = await fetch(`${auth.baseUrl}/sessions/populated?${query}`, {
     headers: { Authorization: `Bearer ${auth.token}` },
     cache: "no-store",
