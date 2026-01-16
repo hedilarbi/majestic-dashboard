@@ -73,9 +73,7 @@ function EventSelect({
 
   const isDisabled = options.length === 0;
   const dropdownClasses =
-    placement === "up"
-      ? "absolute bottom-full mb-2"
-      : "absolute top-full mt-2";
+    placement === "up" ? "absolute bottom-full mb-2" : "absolute top-full mt-2";
 
   return (
     <div className="space-y-2" ref={containerRef}>
@@ -105,9 +103,7 @@ function EventSelect({
           ref={buttonRef}
         >
           <span
-            className={
-              selectedOption ? "text-slate-900" : "text-slate-400"
-            }
+            className={selectedOption ? "text-slate-900" : "text-slate-400"}
           >
             {selectedOption?.name || placeholder}
           </span>
@@ -369,14 +365,14 @@ export default function AfficheCinemaClient({
             <p className="text-slate-500 mt-1">{TEXT.subtitle}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
+            {/* <button
               type="button"
               onClick={openCreateModal}
               className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
             >
               <Icon name="plus" className="h-5 w-5" />
               Ajouter une affiche
-            </button>
+            </button> */}
           </div>
         </div>
 
