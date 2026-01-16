@@ -192,7 +192,6 @@ export default function SessionFormModal({
   pricingError,
   onClose,
 }) {
-  console.log(session);
   const router = useRouter();
   const { toast, showToast } = useToast();
   const isEditing = mode === "edit" && Boolean(session);
