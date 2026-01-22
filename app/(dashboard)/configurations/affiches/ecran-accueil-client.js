@@ -13,11 +13,12 @@ import {
   deleteHomeHero,
   swapHomeHeroOrder,
   updateHomeHero,
+  updateHomeHeroEventAffiche,
 } from "@/services/home-hero-actions";
 
 const TEXT = {
-  title: "Écran d'accueil",
-  subtitle: "Gère le carrousel hero de la page d'accueil du site client.",
+  title: "Affiches",
+  subtitle: "Gère le carrousel hero du site client.",
   listTitle: "Slides du hero",
   empty: "Aucune slide pour le moment.",
 };
@@ -26,6 +27,7 @@ const buildFormData = ({
   formState,
   posterFile,
   requirePoster,
+  requireEvent = false,
   includeOrderActive = true,
 }) => {
   const formData = new FormData();
@@ -46,6 +48,8 @@ const buildFormData = ({
 
   if (formState.eventId) {
     formData.append("eventId", formState.eventId);
+  } else if (requireEvent) {
+    return { ok: false, message: "Veuillez sélectionner un événement." };
   }
 
   if (includeOrderActive) {
@@ -81,6 +85,7 @@ export default function EcranAccueilClient({
   const [isSwapping, setIsSwapping] = useState(false);
   const [dragHandleId, setDragHandleId] = useState(null);
   const [activeUpdatingId, setActiveUpdatingId] = useState("");
+  const [afficheUpdatingId, setAfficheUpdatingId] = useState("");
   const { toast, showToast } = useToast();
 
   const [formState, setFormState] = useState({
@@ -192,6 +197,7 @@ export default function EcranAccueilClient({
       formState,
       posterFile,
       requirePoster: true,
+      requireEvent: true,
       includeOrderActive: false,
     });
 
@@ -247,7 +253,7 @@ export default function EcranAccueilClient({
     try {
       const result = await updateHomeHero(
         editingItem.id,
-        resultPayload.formData
+        resultPayload.formData,
       );
 
       if (!result.ok) {
@@ -313,6 +319,33 @@ export default function EcranAccueilClient({
       showToast("Mise à jour impossible.", "error");
     } finally {
       setActiveUpdatingId("");
+    }
+  };
+
+  const handleToggleEventAffiche = async (item) => {
+    if (!item?.id) {
+      return;
+    }
+
+    setAfficheUpdatingId(item.id);
+
+    try {
+      const result = await updateHomeHeroEventAffiche({
+        id: item.id,
+        eventAffiche: !item.eventAffiche,
+      });
+
+      if (!result.ok) {
+        showToast(result.message || "Mise à jour impossible.", "error");
+        return;
+      }
+
+      showToast("Affiche principale mise à jour.", "success");
+      router.refresh();
+    } catch {
+      showToast("Mise à jour impossible.", "error");
+    } finally {
+      setAfficheUpdatingId("");
     }
   };
 
@@ -457,10 +490,11 @@ export default function EcranAccueilClient({
                     <th className="px-4 py-4">Déplacer</th>
                     <th className="px-6 py-4">Affiche</th>
                     <th className="px-6 py-4">Titre</th>
-                    <th className="px-6 py-4">Sous-titre</th>
+
                     <th className="px-6 py-4">Événement</th>
                     <th className="px-6 py-4">Ordre</th>
                     <th className="px-6 py-4">Statut</th>
+                    <th className="px-6 py-4">Affiche principale</th>
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -526,9 +560,7 @@ export default function EcranAccueilClient({
                         <td className="px-6 py-4 font-medium text-slate-900">
                           {item.title || "-"}
                         </td>
-                        <td className="px-6 py-4 text-slate-500">
-                          {item.subtitle || "-"}
-                        </td>
+
                         <td className="px-6 py-4 text-slate-500">
                           {eventName}
                         </td>
@@ -549,9 +581,7 @@ export default function EcranAccueilClient({
                                 isSwapping || activeUpdatingId === item.id
                               }
                               className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                                item.active
-                                  ? "bg-emerald-500"
-                                  : "bg-slate-300"
+                                item.active ? "bg-emerald-500" : "bg-slate-300"
                               } ${
                                 isSwapping || activeUpdatingId === item.id
                                   ? "cursor-not-allowed opacity-70"
@@ -568,6 +598,20 @@ export default function EcranAccueilClient({
                               />
                             </button>
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
+                              checked={item.eventAffiche === true}
+                              onChange={() => handleToggleEventAffiche(item)}
+                              disabled={
+                                isSwapping || afficheUpdatingId === item.id
+                              }
+                            />
+                            Affiche principale
+                          </label>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-3">

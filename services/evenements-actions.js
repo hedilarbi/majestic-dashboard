@@ -137,6 +137,49 @@ export async function deleteEvent(id) {
   return { ok: true };
 }
 
+export async function updateEventStatus({ id, status }) {
+  const auth = await getAuthContext();
+
+  if (!auth.ok) {
+    return auth;
+  }
+
+  if (!id) {
+    return { ok: false, message: "Identifiant manquant." };
+  }
+
+  if (status !== "active" && status !== "inactive") {
+    return { ok: false, message: "Statut invalide." };
+  }
+
+  const formData = new FormData();
+  formData.append("status", status);
+
+  const response = await fetch(
+    `${auth.baseUrl}/events/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${auth.token}`,
+      },
+      body: formData,
+      cache: "no-store",
+    }
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      message: data?.message || "Mise à jour impossible.",
+    };
+  }
+
+  revalidatePath("/evenements");
+  return { ok: true };
+}
+
 export async function seedEvents(count = 20) {
   const auth = await getAuthContext();
 

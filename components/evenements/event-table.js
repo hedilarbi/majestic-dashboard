@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { Icon } from "@/components/ui/icons";
 import {
@@ -11,8 +13,35 @@ import {
   TYPE_STYLES,
   formatDate,
 } from "@/lib/evenements/helpers";
+import { updateEventStatus } from "@/services/evenements-actions";
 
 export default function EventTable({ events, onDelete }) {
+  const router = useRouter();
+  const [updatingId, setUpdatingId] = useState("");
+
+  const handleToggleStatus = async (eventItem) => {
+    if (!eventItem?.id) {
+      return;
+    }
+
+    const nextStatus = eventItem.status === "active" ? "inactive" : "active";
+
+    setUpdatingId(eventItem.id);
+
+    try {
+      const result = await updateEventStatus({
+        id: eventItem.id,
+        status: nextStatus,
+      });
+
+      if (result.ok) {
+        router.refresh();
+      }
+    } finally {
+      setUpdatingId("");
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
@@ -31,6 +60,7 @@ export default function EventTable({ events, onDelete }) {
               <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Date de sortie
               </th>
+
               <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Statut
               </th>
@@ -42,7 +72,7 @@ export default function EventTable({ events, onDelete }) {
           <tbody className="divide-y divide-slate-200 text-slate-600">
             {events.length === 0 ? (
               <tr>
-                <td className="px-6 py-10 text-sm text-slate-500" colSpan={6}>
+                <td className="px-6 py-10 text-sm text-slate-500" colSpan={7}>
                   Aucun événement trouvé.
                 </td>
               </tr>
@@ -52,8 +82,7 @@ export default function EventTable({ events, onDelete }) {
                   STATUS_STYLES[eventItem.status] || STATUS_STYLES.active;
                 const typeStyle =
                   TYPE_STYLES[eventItem.type] || TYPE_STYLES.movie;
-                const typeLabel =
-                  TYPE_LABELS[eventItem.type] || eventItem.type;
+                const typeLabel = TYPE_LABELS[eventItem.type] || eventItem.type;
                 const statusLabel =
                   STATUS_LABELS[eventItem.status] || eventItem.status;
                 const genresLabel =
@@ -106,25 +135,43 @@ export default function EventTable({ events, onDelete }) {
                     <td className="px-6 py-4 text-sm text-slate-500">
                       {formatDate(eventItem.releaseDate)}
                     </td>
+
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyle.badge}`}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={eventItem.status === "active"}
+                        onClick={() => handleToggleStatus(eventItem)}
+                        disabled={updatingId === eventItem.id}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                          eventItem.status === "active"
+                            ? "bg-emerald-500"
+                            : "bg-slate-300"
+                        } ${
+                          updatingId === eventItem.id
+                            ? "cursor-not-allowed opacity-70"
+                            : "hover:opacity-90"
+                        }`}
+                        aria-label="Basculer le statut"
                       >
                         <span
-                          className={`size-1.5 rounded-full mr-1.5 ${statusStyle.dot}`}
+                          className={`inline-block h-5 w-5 rounded-full bg-white shadow transition ${
+                            eventItem.status === "active"
+                              ? "translate-x-5"
+                              : "translate-x-1"
+                          }`}
                         />
-                        {statusLabel}
-                      </span>
+                      </button>
                     </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                          <Link
-                            href={`/evenements/${eventItem.id}`}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                            aria-label="Voir l'événement"
-                          >
-                            <Icon name="eye" className="h-4 w-4" />
-                          </Link>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <Link
+                          href={`/evenements/${eventItem.id}`}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                          aria-label="Voir l'événement"
+                        >
+                          <Icon name="eye" className="h-4 w-4" />
+                        </Link>
                         <button
                           type="button"
                           onClick={() => onDelete(eventItem)}

@@ -47,7 +47,7 @@ export async function createHomeHero(formData) {
     };
   }
 
-  revalidatePath("/configurations/ecran-accueil");
+  revalidatePath("/configurations/affiches");
   return { ok: true };
 }
 
@@ -87,7 +87,7 @@ export async function updateHomeHero(id, formData) {
     };
   }
 
-  revalidatePath("/configurations/ecran-accueil");
+  revalidatePath("/configurations/affiches");
   return { ok: true };
 }
 
@@ -122,7 +122,7 @@ export async function deleteHomeHero(id) {
     };
   }
 
-  revalidatePath("/configurations/ecran-accueil");
+  revalidatePath("/configurations/affiches");
   return { ok: true };
 }
 
@@ -156,6 +156,43 @@ export async function swapHomeHeroOrder({ firstId, secondId }) {
     };
   }
 
-  revalidatePath("/configurations/ecran-accueil");
+  revalidatePath("/configurations/affiches");
+  return { ok: true };
+}
+
+export async function updateHomeHeroEventAffiche({ id, eventAffiche }) {
+  const auth = await getAuthContext();
+
+  if (!auth.ok) {
+    return auth;
+  }
+
+  if (!id) {
+    return { ok: false, message: "Identifiant manquant." };
+  }
+
+  const response = await fetch(
+    `${auth.baseUrl}/home-hero/${encodeURIComponent(id)}/event-affiche`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${auth.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ eventAffiche: Boolean(eventAffiche) }),
+      cache: "no-store",
+    }
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      message: data?.message || "Mise à jour impossible.",
+    };
+  }
+
+  revalidatePath("/configurations/affiches");
   return { ok: true };
 }

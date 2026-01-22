@@ -18,8 +18,8 @@ const CONFIG_ITEMS = [
   { label: "Tarifs", href: "/configurations/tarifs" },
   { label: "Versions", href: "/configurations/versions" },
   { label: "Types de spectacle", href: "/configurations/types-spectacle" },
-  { label: "Écran d'accueil", href: "/configurations/ecran-accueil" },
-  { label: "Affiche cinéma", href: "/configurations/affiche-cinema" },
+  { label: "Affiches", href: "/configurations/affiches" },
+
   { label: "Salles", href: "/configurations/salles" },
 ];
 
@@ -38,7 +38,7 @@ const isActivePath = (pathname, href) => {
 export default function SidebarNav() {
   const pathname = usePathname();
   const isConfigActive = CONFIG_ITEMS.some((item) =>
-    isActivePath(pathname, item.href)
+    isActivePath(pathname, item.href),
   );
   const [isConfigOpen, setIsConfigOpen] = useState(isConfigActive);
 
@@ -73,7 +73,11 @@ export default function SidebarNav() {
           </Link>
         );
       })}
-      <details className="group" open={isConfigOpen} onToggle={handleConfigToggle}>
+      <details
+        className="group"
+        open={isConfigOpen}
+        onToggle={handleConfigToggle}
+      >
         <summary
           className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer list-none [&::-webkit-details-marker]:hidden ${
             isConfigActive
