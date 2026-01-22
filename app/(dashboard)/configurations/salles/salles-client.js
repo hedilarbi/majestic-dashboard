@@ -92,12 +92,12 @@ export default function SallesClient({
 
   const sortedRooms = useMemo(
     () => [...initialRooms].sort((a, b) => a.name.localeCompare(b.name)),
-    [initialRooms]
+    [initialRooms],
   );
 
   const pricingOptions = useMemo(
     () => buildPricingOptions(initialPricing),
-    [initialPricing]
+    [initialPricing],
   );
 
   const seatCount = useMemo(() => countSeats(layoutState), [layoutState]);
@@ -346,7 +346,7 @@ export default function SallesClient({
             </h1>
             <p className="text-slate-500 mt-1">{TEXT.subtitle}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          {/* <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={openCreateModal}
@@ -355,7 +355,7 @@ export default function SallesClient({
               <Icon name="plus" className="h-5 w-5" />
               {TEXT.add}
             </button>
-          </div>
+          </div> */}
         </div>
 
         {errorMessage ? (
