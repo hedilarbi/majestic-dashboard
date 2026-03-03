@@ -45,6 +45,11 @@ export default function ConnexionPage() {
         return;
       }
 
+      if (data?.user?.role === "ticket_office") {
+        router.replace("/guichet");
+        return;
+      }
+
       if (data?.user?.role !== "admin") {
         setErrorMessage("Acces refuse.");
         return;

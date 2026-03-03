@@ -115,7 +115,7 @@ export const getEventSessions = async (eventId) => {
     };
   }
 
-  return { sessions: normalizeSessions(data), error: "" };
+  return { sessions: normalizeSessions(data, auth.baseUrl), error: "" };
 };
 
 export const getSessionFormData = async () => {

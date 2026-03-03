@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 const INVALID_CREDENTIALS_MESSAGE = "Invalid email or password";
+const ALLOWED_ROLES = new Set(["admin", "ticket_office"]);
 
 export async function POST(request) {
   const baseUrl = process.env.BASE_URL;
@@ -41,7 +42,7 @@ export async function POST(request) {
     return Response.json({ message }, { status: apiResponse.status });
   }
 
-  if (data?.user?.role !== "admin") {
+  if (!ALLOWED_ROLES.has(data?.user?.role)) {
     return Response.json({ message: "Acces refuse." }, { status: 403 });
   }
 

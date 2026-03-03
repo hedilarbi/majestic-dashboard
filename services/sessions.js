@@ -72,7 +72,7 @@ export const getSessions = async ({ page, limit, status, from, to, orderBy }) =>
     };
   }
 
-  const items = normalizeSessions(data);
+  const items = normalizeSessions(data, auth.baseUrl);
 
   return {
     items,

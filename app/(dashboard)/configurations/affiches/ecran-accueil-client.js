@@ -13,7 +13,8 @@ import {
   deleteHomeHero,
   swapHomeHeroOrder,
   updateHomeHero,
-  updateHomeHeroEventAffiche,
+  updateHomeHeroMovieAffiche,
+  updateHomeHeroShowAffiche,
 } from "@/services/home-hero-actions";
 
 const TEXT = {
@@ -322,7 +323,7 @@ export default function EcranAccueilClient({
     }
   };
 
-  const handleToggleEventAffiche = async (item) => {
+  const handleToggleMovieAffiche = async (item) => {
     if (!item?.id) {
       return;
     }
@@ -330,9 +331,9 @@ export default function EcranAccueilClient({
     setAfficheUpdatingId(item.id);
 
     try {
-      const result = await updateHomeHeroEventAffiche({
+      const result = await updateHomeHeroMovieAffiche({
         id: item.id,
-        eventAffiche: !item.eventAffiche,
+        movieAffiche: !item.movieAffiche,
       });
 
       if (!result.ok) {
@@ -340,7 +341,34 @@ export default function EcranAccueilClient({
         return;
       }
 
-      showToast("Affiche principale mise à jour.", "success");
+      showToast("Affiche film mise à jour.", "success");
+      router.refresh();
+    } catch {
+      showToast("Mise à jour impossible.", "error");
+    } finally {
+      setAfficheUpdatingId("");
+    }
+  };
+
+  const handleToggleShowAffiche = async (item) => {
+    if (!item?.id) {
+      return;
+    }
+
+    setAfficheUpdatingId(item.id);
+
+    try {
+      const result = await updateHomeHeroShowAffiche({
+        id: item.id,
+        showAffiche: !item.showAffiche,
+      });
+
+      if (!result.ok) {
+        showToast(result.message || "Mise à jour impossible.", "error");
+        return;
+      }
+
+      showToast("Affiche spectacle mise à jour.", "success");
       router.refresh();
     } catch {
       showToast("Mise à jour impossible.", "error");
@@ -494,7 +522,8 @@ export default function EcranAccueilClient({
                     <th className="px-6 py-4">Événement</th>
                     <th className="px-6 py-4">Ordre</th>
                     <th className="px-6 py-4">Statut</th>
-                    <th className="px-6 py-4">Affiche principale</th>
+                    <th className="px-6 py-4">Affiche Film</th>
+                    <th className="px-6 py-4">Affiche Spectacle</th>
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -604,13 +633,27 @@ export default function EcranAccueilClient({
                             <input
                               type="checkbox"
                               className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
-                              checked={item.eventAffiche === true}
-                              onChange={() => handleToggleEventAffiche(item)}
+                              checked={item.movieAffiche === true}
+                              onChange={() => handleToggleMovieAffiche(item)}
                               disabled={
                                 isSwapping || afficheUpdatingId === item.id
                               }
                             />
-                            Affiche principale
+                            Affiche Film
+                          </label>
+                        </td>
+                        <td className="px-6 py-4">
+                          <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
+                              checked={item.showAffiche === true}
+                              onChange={() => handleToggleShowAffiche(item)}
+                              disabled={
+                                isSwapping || afficheUpdatingId === item.id
+                              }
+                            />
+                            Affiche Spectacle
                           </label>
                         </td>
                         <td className="px-6 py-4 text-right">

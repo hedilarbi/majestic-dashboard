@@ -44,7 +44,7 @@ export default function SeancesClient({
   const dateFromParam = searchParams.get("from") || initialDateFrom || "";
   const dateToParam = searchParams.get("to") || initialDateTo || "";
   const orderByParam =
-    searchParams.get("orderBy") || initialOrderBy || "date";
+    searchParams.get("orderBy") || initialOrderBy || "createdAt";
   const filtersKey = useMemo(
     () => `${statusParam}|${dateFromParam}|${dateToParam}|${orderByParam}`,
     [dateFromParam, dateToParam, orderByParam, statusParam]
@@ -82,7 +82,7 @@ export default function SeancesClient({
 
     if (Object.prototype.hasOwnProperty.call(updates, "orderBy")) {
       const value = updates.orderBy;
-      if (value && value !== "date") {
+      if (value && value !== "createdAt") {
         params.set("orderBy", value);
       } else {
         params.delete("orderBy");

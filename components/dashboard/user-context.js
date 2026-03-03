@@ -121,7 +121,6 @@ export function UserProvider({ initialUser = null, children }) {
         if (cachedUser) {
           setUser(cachedUser);
           setIsLoading(false);
-          fetchUser({ silent: true });
           return;
         }
       }
@@ -139,7 +138,6 @@ export function UserProvider({ initialUser = null, children }) {
 
     writeCachedUser(initialUser);
     setIsLoading(false);
-    fetchUser({ silent: true });
   }, [initialUser, refreshUser, fetchUser]);
 
   useEffect(() => {

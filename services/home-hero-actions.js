@@ -160,7 +160,7 @@ export async function swapHomeHeroOrder({ firstId, secondId }) {
   return { ok: true };
 }
 
-export async function updateHomeHeroEventAffiche({ id, eventAffiche }) {
+export async function updateHomeHeroMovieAffiche({ id, movieAffiche }) {
   const auth = await getAuthContext();
 
   if (!auth.ok) {
@@ -172,14 +172,51 @@ export async function updateHomeHeroEventAffiche({ id, eventAffiche }) {
   }
 
   const response = await fetch(
-    `${auth.baseUrl}/home-hero/${encodeURIComponent(id)}/event-affiche`,
+    `${auth.baseUrl}/home-hero/${encodeURIComponent(id)}/movie-affiche`,
     {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${auth.token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ eventAffiche: Boolean(eventAffiche) }),
+      body: JSON.stringify({ movieAffiche: Boolean(movieAffiche) }),
+      cache: "no-store",
+    }
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      message: data?.message || "Mise à jour impossible.",
+    };
+  }
+
+  revalidatePath("/configurations/affiches");
+  return { ok: true };
+}
+
+export async function updateHomeHeroShowAffiche({ id, showAffiche }) {
+  const auth = await getAuthContext();
+
+  if (!auth.ok) {
+    return auth;
+  }
+
+  if (!id) {
+    return { ok: false, message: "Identifiant manquant." };
+  }
+
+  const response = await fetch(
+    `${auth.baseUrl}/home-hero/${encodeURIComponent(id)}/show-affiche`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${auth.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ showAffiche: Boolean(showAffiche) }),
       cache: "no-store",
     }
   );

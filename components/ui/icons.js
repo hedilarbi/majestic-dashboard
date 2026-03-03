@@ -74,6 +74,7 @@ const ICONS = {
   trendingUp: <path d="M4 16l6-6 4 4 6-6M14 8h6v6" />,
   minus: <path d="M5 12h14" />,
   chevronDown: <path d="M6 9l6 6 6-6" />,
+  chevronLeft: <path d="M15 6l-6 6 6 6" />,
   search: (
     <>
       <circle cx="11" cy="11" r="7" />
@@ -97,6 +98,13 @@ const ICONS = {
     <>
       <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" />
       <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  eyeOff: (
+    <>
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M3 3l18 18" />
     </>
   ),
   filter: (

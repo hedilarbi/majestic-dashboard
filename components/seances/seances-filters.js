@@ -8,7 +8,7 @@ export default function SeancesFilters({
   initialDateFrom = "",
   initialDateTo = "",
   initialStatus = "Tous",
-  initialOrderBy = "date",
+  initialOrderBy = "createdAt",
   onApply,
 }) {
   const [dateFrom, setDateFrom] = useState(initialDateFrom);

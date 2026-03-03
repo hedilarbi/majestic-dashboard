@@ -103,23 +103,65 @@ const buildPricingStateFromSession = (pricing, session) => {
     ? session.pricingLimits
     : [];
 
+  if (!limits.length) {
+    return base;
+  }
+
+  const next = {};
+  for (const item of pricing || []) {
+    if (!item?.id) {
+      continue;
+    }
+
+    next[item.id] = { enabled: false, quota: "" };
+  }
+
+  let matchedCount = 0;
+
   limits.forEach((limit) => {
     const id = limit?.pricingId?._id ?? limit?.pricingId;
-    if (!id || !base[id]) {
+    const limitName = String(limit?.name || "").trim().toLowerCase();
+    const limitPrice = Number(limit?.price);
+    const matchedItem = (pricing || []).find((item) => {
+      if (!item?.id) {
+        return false;
+      }
+
+      if (id && String(item.id) === String(id)) {
+        return true;
+      }
+
+      const itemName = String(item?.name || "").trim().toLowerCase();
+      const itemPrice = Number(item?.price);
+      const sameName = Boolean(limitName) && itemName === limitName;
+      const samePrice =
+        Number.isFinite(limitPrice) && Number.isFinite(itemPrice)
+          ? itemPrice === limitPrice
+          : true;
+
+      return sameName && samePrice;
+    });
+
+    if (!matchedItem?.id || !next[matchedItem.id]) {
       return;
     }
 
-    base[id] = {
-      ...base[id],
+    next[matchedItem.id] = {
+      ...next[matchedItem.id],
       enabled: true,
       quota:
         limit?.maxTickets !== undefined && limit?.maxTickets !== null
           ? String(limit.maxTickets)
           : "",
     };
+    matchedCount += 1;
   });
 
-  return base;
+  if (matchedCount === 0) {
+    return base;
+  }
+
+  return next;
 };
 
 const applySessionOverrides = (baseState, session) => {
@@ -507,17 +549,33 @@ export default function SessionFormModal({
         continue;
       }
 
-      if (!state.quota || !String(state.quota).trim()) {
-        continue;
-      }
+      const parsedPrice =
+        typeof item.price === "number" ? item.price : Number(item.price);
 
-      const parsed = Number.parseInt(String(state.quota).replace(",", "."), 10);
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        setFormError("Veuillez saisir un quota valide.");
+      if (!item.name || !Number.isFinite(parsedPrice) || parsedPrice < 0) {
+        setFormError("Un tarif configuré est invalide.");
         return;
       }
 
-      pricingLimits.push({ pricingId: item.id, maxTickets: parsed });
+      const limit = {
+        name: item.name,
+        price: parsedPrice,
+      };
+
+      if (state.quota && String(state.quota).trim()) {
+        const parsed = Number.parseInt(
+          String(state.quota).replace(",", "."),
+          10
+        );
+        if (!Number.isFinite(parsed) || parsed < 0) {
+          setFormError("Veuillez saisir un quota valide.");
+          return;
+        }
+
+        limit.maxTickets = parsed;
+      }
+
+      pricingLimits.push(limit);
     }
 
     setIsSubmitting(true);
@@ -635,17 +693,6 @@ export default function SessionFormModal({
                   ))}
                 </div>
               ) : null}
-              {formError && (
-                <div
-                  className={`rounded-xl border px-4 py-3 text-sm min-h-[44px] transition ${
-                    formError
-                      ? "border-red-200 bg-red-50 text-red-700"
-                      : "border-transparent bg-transparent text-transparent"
-                  }`}
-                >
-                  {formError || ""}
-                </div>
-              )}
 
               <div>
                 {canSelectEvent ? (
@@ -961,29 +1008,40 @@ export default function SessionFormModal({
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:text-red-600"
-                disabled={isSubmitting}
-              >
-                {TEXT.cancel}
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90 disabled:opacity-70"
-              >
-                <Icon name="check" className="h-4 w-4" />
-                {isSubmitting
-                  ? isEditing
-                    ? "Enregistrement..."
-                    : "Création..."
-                  : isEditing
-                  ? TEXT.update
-                  : TEXT.create}
-              </button>
+            <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex-1">
+                  {formError ? (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+                      {formError}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:text-red-600"
+                    disabled={isSubmitting}
+                  >
+                    {TEXT.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90 disabled:opacity-70"
+                  >
+                    <Icon name="check" className="h-4 w-4" />
+                    {isSubmitting
+                      ? isEditing
+                        ? "Enregistrement..."
+                        : "Création..."
+                      : isEditing
+                      ? TEXT.update
+                      : TEXT.create}
+                  </button>
+                </div>
+              </div>
             </div>
           </form>
         </div>

@@ -1,11 +1,59 @@
 import Image from "next/image";
+import { redirect } from "next/navigation";
 
 import DashboardHeader from "@/components/dashboard/dashboard-header";
 import LogoutButton from "@/components/dashboard/logout-button";
 import SidebarNav from "@/components/dashboard/sidebar-nav";
 import { UserProvider } from "@/components/dashboard/user-context";
+import { getAuthContext } from "@/services/api";
 
-export default function DashboardLayout({ children }) {
+const redirectToConnexion = () => {
+  redirect("/api/auth/logout?redirect=/connexion");
+};
+
+const getAdminUser = async () => {
+  const auth = await getAuthContext();
+
+  if (!auth.ok) {
+    if (auth.message === "Configuration serveur manquante.") {
+      throw new Error(auth.message);
+    }
+    redirectToConnexion();
+  }
+
+  let response;
+
+  try {
+    response = await fetch(`${auth.baseUrl}/staff/me`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+      cache: "no-store",
+    });
+  } catch {
+    redirectToConnexion();
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    redirectToConnexion();
+  }
+
+  const role = data?.user?.role;
+
+  if (role === "ticket_office") {
+    redirect("/guichet");
+  }
+
+  if (!data?.user || role !== "admin") {
+    redirectToConnexion();
+  }
+
+  return data?.user ?? null;
+};
+
+export default async function DashboardLayout({ children }) {
+  const user = await getAdminUser();
+
   return (
     <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-white to-accent/10 text-foreground flex flex-col md:flex-row">
       <aside className="w-full md:w-64 md:h-screen flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-slate-200 bg-white/90 backdrop-blur">
@@ -26,7 +74,7 @@ export default function DashboardLayout({ children }) {
       </aside>
 
       <div className="flex-1 flex flex-col h-full min-w-0 min-h-0">
-        <UserProvider>
+        <UserProvider initialUser={user}>
           <DashboardHeader />
           <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth min-h-0">
             {children}

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+const ALLOWED_ROLES = new Set(["admin", "ticket_office"]);
+
 const clearAuthCookies = (response) => {
   const cookieOptions = {
     httpOnly: true,
@@ -54,7 +56,7 @@ export async function GET(request) {
     return response;
   }
 
-  if (data?.user?.role !== "admin") {
+  if (!ALLOWED_ROLES.has(data?.user?.role)) {
     const response = NextResponse.json(
       { message: "Acces refuse." },
       { status: 403 }

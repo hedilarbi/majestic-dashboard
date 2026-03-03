@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
-export async function POST() {
-  const response = NextResponse.json({ success: true });
+const expireAuthCookies = (response) => {
   const cookieOptions = {
     httpOnly: true,
     sameSite: "lax",
@@ -16,4 +15,24 @@ export async function POST() {
   response.cookies.set("user_last_name", "", cookieOptions);
 
   return response;
+};
+
+const getRedirectUrl = (request, redirectTo) => {
+  if (redirectTo && redirectTo.startsWith("/")) {
+    return new URL(redirectTo, request.url);
+  }
+
+  return new URL("/connexion", request.url);
+};
+
+export async function POST() {
+  const response = NextResponse.json({ success: true });
+  return expireAuthCookies(response);
+}
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const redirectTo = searchParams.get("redirect");
+  const response = NextResponse.redirect(getRedirectUrl(request, redirectTo));
+  return expireAuthCookies(response);
 }
