@@ -598,7 +598,11 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       return undefined;
     }
 
-    const socket = io(socketUrl);
+    const socket = io(socketUrl, {
+      transports: ["websocket"],
+      reconnection: true,
+      timeout: 10000,
+    });
 
     socket.emit("join-session", { sessionId: seanceId });
 
@@ -1039,7 +1043,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
     });
 
     return Array.from(groups.values());
-  }, [pricingItems, selectedSeats]);
+  }, [pricingItems, resolveSeatOverride, selectedSeats]);
 
   return (
     <div className="flex flex-col gap-6">
