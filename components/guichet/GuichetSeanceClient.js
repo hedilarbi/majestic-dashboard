@@ -599,7 +599,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
     }
 
     const socket = io(socketUrl, {
-      transports: ["websocket"],
+      transports: ["polling", "websocket"],
       reconnection: true,
       timeout: 10000,
     });
