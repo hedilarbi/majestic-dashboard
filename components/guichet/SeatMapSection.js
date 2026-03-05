@@ -89,7 +89,7 @@ export default function SeatMapSection({
           </p>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-3">
           {seatRows.map((row) => (
             <div key={row.label} className="flex items-center gap-4">
               <span className="w-4 text-[11px] font-semibold text-slate-400">
