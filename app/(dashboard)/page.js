@@ -1,376 +1,965 @@
-import { Icon } from "@/components/ui/icons";
+import Link from "next/link";
 
-const STATS = [
+import DashboardAccessDenied from "@/components/dashboard/access-denied";
+import { Icon } from "@/components/ui/icons";
+import {
+  formatDate,
+  formatDateTime,
+  formatPrice,
+} from "@/lib/configurations/formatters";
+import {
+  DASHBOARD_PERMISSION_DEFINITIONS,
+  DASHBOARD_ROLE_LABELS,
+  hasDashboardPermission,
+} from "@/lib/dashboard-permissions";
+import { getDashboardUser } from "@/services/dashboard-auth";
+import { getEvents } from "@/services/evenements";
+import { getReservationRequests } from "@/services/reservation-requests";
+import { getSalesTransactions } from "@/services/sales";
+import { getSessions } from "@/services/sessions";
+import { getStatistics } from "@/services/statistics";
+
+const HERO_ACTIONS = [
   {
-    label: "Total Evenements",
-    value: "124",
-    trend: "+5%",
-    trendType: "up",
-    icon: "theater",
-  },
-  {
-    label: "Billets Vendu",
-    value: "14 203",
-    trend: "+12%",
-    trendType: "up",
+    label: "Voir les statistiques",
+    href: "/statistiques",
+    module: "statistics",
     icon: "activity",
   },
   {
-    label: "Revenus",
-    value: "142k €",
-    trend: "+8%",
-    trendType: "up",
+    label: "Ouvrir les événements",
+    href: "/evenements",
+    module: "events",
+    icon: "ticket",
+  },
+  {
+    label: "Suivre les séances",
+    href: "/seances",
+    module: "sessions",
+    icon: "calendar",
+  },
+  {
+    label: "Voir les transactions",
+    href: "/ventes/transactions",
+    module: "sales_transactions",
     icon: "money",
   },
   {
-    label: "Seances a venir",
-    value: "8",
-    trend: "0%",
-    trendType: "flat",
-    icon: "clock",
+    label: "Traiter les demandes",
+    href: "/demandes-reservation",
+    module: "reservation_requests",
+    icon: "form",
   },
 ];
 
-const POPULAR_EVENTS = [
-  { name: "Dune: Deuxieme Partie", percent: 85, color: "bg-primary" },
-  { name: "Kung Fu Panda 4", percent: 62, color: "bg-indigo-500" },
-  { name: "Godzilla x Kong", percent: 45, color: "bg-cyan-500" },
-  { name: "Civil War", percent: 30, color: "bg-amber-500" },
+const QUICK_LINKS = [
+  {
+    label: "Statistiques",
+    description: "Analyser les ventes, les tarifs et les canaux.",
+    href: "/statistiques",
+    module: "statistics",
+    icon: "activity",
+  },
+  {
+    label: "Événements",
+    description: "Mettre a jour la programmation et les contenus.",
+    href: "/evenements",
+    module: "events",
+    icon: "ticket",
+  },
+  {
+    label: "Séances",
+    description: "Verifier les séances programmées et leurs statuts.",
+    href: "/seances",
+    module: "sessions",
+    icon: "calendar",
+  },
+  {
+    label: "Transactions",
+    description: "Consulter les ventes enregistrées par le système.",
+    href: "/ventes/transactions",
+    module: "sales_transactions",
+    icon: "money",
+  },
+  {
+    label: "Demandes de réservation",
+    description: "Traiter les demandes d'espace envoyées depuis le site.",
+    href: "/demandes-reservation",
+    module: "reservation_requests",
+    icon: "form",
+  },
+  {
+    label: "Soumissions de formulaires",
+    description: "Voir les candidatures et réponses des formulaires publiés.",
+    href: "/soumissions-formulaires",
+    module: "blog_form_submissions",
+    icon: "article",
+  },
+  {
+    label: "Caisse",
+    description: "Suivre les clôtures et les montants consolides.",
+    href: "/caisse",
+    module: "cash_registers",
+    icon: "money",
+  },
+  {
+    label: "Staffs",
+    description: "Gerer les comptes internes et leurs accès.",
+    href: "/staffs",
+    module: "staffs",
+    icon: "users",
+  },
 ];
 
-const STATUS_STYLES = {
-  confirmed: {
-    label: "Confirme",
-    badge: "bg-emerald-100 text-emerald-800",
-    dot: "bg-emerald-500",
-  },
-  pending: {
-    label: "En attente",
-    badge: "bg-amber-100 text-amber-800",
-    dot: "bg-amber-500",
-  },
-  canceled: {
-    label: "Annule",
-    badge: "bg-red-100 text-red-800",
-    dot: "bg-red-500",
-  },
+const pad = (value) => String(value).padStart(2, "0");
+
+const toLocalDateParam = (value) => {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
-const RECENT_ACTIVITY = [
-  {
-    id: "#TIX-0092",
-    customer: "Sarah Jenkins",
-    movie: "Dune: Deuxieme Partie",
-    time: "il y a 2 min",
-    status: "confirmed",
-    amount: "45,00 €",
-  },
-  {
-    id: "#TIX-0091",
-    customer: "Mike Ross",
-    movie: "Civil War",
-    time: "il y a 15 min",
-    status: "pending",
-    amount: "15,00 €",
-  },
-  {
-    id: "#TIX-0090",
-    customer: "Emily Wong",
-    movie: "Kung Fu Panda 4",
-    time: "il y a 1h",
-    status: "canceled",
-    amount: "30,00 €",
-  },
-  {
-    id: "#TIX-0089",
-    customer: "David Liu",
-    movie: "Dune: Deuxieme Partie",
-    time: "il y a 2h",
-    status: "confirmed",
-    amount: "60,00 €",
-  },
-  {
-    id: "#TIX-0088",
-    customer: "Jessica Pearson",
-    movie: "Godzilla x Kong",
-    time: "il y a 3h",
-    status: "confirmed",
-    amount: "22,50 €",
-  },
-];
+const capitalize = (value) =>
+  value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
 
-export default function DashboardPage() {
+const formatLongDate = (value) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return capitalize(
+    date.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }),
+  );
+};
+
+const formatCompactDateTime = (value) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const formatNumber = (value) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric.toLocaleString("fr-FR") : "-";
+};
+
+const formatSessionDateOnly = (value) => {
+  if (!value) {
+    return "-";
+  }
+
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const [, year, month, day] = match;
+      return `${day}/${month}/${year}`;
+    }
+  }
+
+  return formatDate(value);
+};
+
+const formatSessionLabel = (session) => {
+  if (!session) {
+    return "-";
+  }
+
+  const eventName = session?.event?.name || session?.eventName || "Séance";
+  const dateLabel = formatSessionDateOnly(session?.date);
+  const timeLabel = session?.sessionTime || session?.timeLabel || "";
+
+  return `${eventName} • ${dateLabel}${timeLabel ? ` ${timeLabel}` : ""}`;
+};
+
+const formatIdentity = (value) => {
+  if (!value || typeof value !== "object") {
+    return "";
+  }
+
+  const firstName = String(value.firstName || "").trim();
+  const lastName = String(value.lastName || "").trim();
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  if (fullName) {
+    return fullName;
+  }
+
+  const email = String(value.email || "").trim();
+  return email || "";
+};
+
+const formatBookingActor = (booking) => {
+  const source = String(booking?.bookingSource || "").toLowerCase();
+
+  if (source === "ticket_office") {
+    const guichet = formatIdentity(booking?.bookedBy);
+    return guichet ? `Guichet • ${guichet}` : "Guichet";
+  }
+
+  const customer = formatIdentity(booking?.customer);
+  if (customer) {
+    return customer;
+  }
+
+  const guest = formatIdentity(booking?.customerContact);
+  if (guest) {
+    return `Invite • ${guest}`;
+  }
+
+  return "Web";
+};
+
+const getAccessibleModulesCount = (user) =>
+  DASHBOARD_PERMISSION_DEFINITIONS.filter((definition) =>
+    hasDashboardPermission(user, definition.module, "list"),
+  ).length;
+
+const getTicketSummary = (session) => {
+  const totalSeats = Number(session?.totalSeats);
+  const availableSeats = Number(session?.availableSeats);
+
+  if (!Number.isFinite(totalSeats) || totalSeats <= 0) {
+    return {
+      soldTicketsLabel: "-",
+      remainingTicketsLabel: "-",
+    };
+  }
+
+  const remaining = Number.isFinite(availableSeats)
+    ? Math.max(availableSeats, 0)
+    : 0;
+  const sold = Math.max(totalSeats - remaining, 0);
+
+  return {
+    soldTicketsLabel: `${formatNumber(sold)} vendu(s)`,
+    remainingTicketsLabel: `${formatNumber(remaining)} restant(s)`,
+  };
+};
+
+function SummaryCard({ label, value, description, icon }) {
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 fade-up">
-        <div>
-          <h1 className="font-secondary text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
-            Vue d&apos;ensemble
-          </h1>
-          <p className="text-slate-500 mt-1">
-            Suivez les performances et les ventes de votre cinema en temps
-            reel.
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="text-3xl font-semibold tracking-tight text-slate-900">
+            {value}
           </p>
         </div>
-        <button className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 active:bg-primary/80 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm shadow-primary/30 transition-all">
-          <Icon name="plus" className="h-5 w-5" />
-          <span>Creer un evenement</span>
-        </button>
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Icon name={icon} className="h-5 w-5" />
+        </span>
       </div>
+      <p className="mt-4 text-sm text-slate-500">{description}</p>
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 fade-up fade-up-delay-1">
-        {STATS.map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-              <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                <Icon name={stat.icon} className="h-5 w-5" />
+function Panel({ title, description, action, children }) {
+  return (
+    <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          {description ? (
+            <p className="text-sm text-slate-500">{description}</p>
+          ) : null}
+        </div>
+        {action}
+      </div>
+      <div className="px-6 py-5">{children}</div>
+    </section>
+  );
+}
+
+export default async function DashboardPage() {
+  const user = await getDashboardUser();
+
+  if (!hasDashboardPermission(user, "dashboard", "list")) {
+    return (
+      <DashboardAccessDenied message="Vous n'avez pas la permission d'accéder au tableau de bord." />
+    );
+  }
+
+  const now = new Date();
+  const today = toLocalDateParam(now);
+  const roleLabel =
+    DASHBOARD_ROLE_LABELS[user?.role] || DASHBOARD_ROLE_LABELS.admin;
+
+  const canViewStatistics = hasDashboardPermission(user, "statistics", "list");
+  const canViewEvents = hasDashboardPermission(user, "events", "list");
+  const canViewSessions = hasDashboardPermission(user, "sessions", "list");
+  const canViewRequests = hasDashboardPermission(
+    user,
+    "reservation_requests",
+    "list",
+  );
+  const canViewTransactions = hasDashboardPermission(
+    user,
+    "sales_transactions",
+    "list",
+  );
+
+  const [
+    statisticsResult,
+    activeEventsResult,
+    upcomingSessionsResult,
+    pendingSessionsResult,
+    pendingRequestsResult,
+    recentTransactionsResult,
+  ] = await Promise.all([
+    canViewStatistics
+      ? getStatistics({ dateStart: today, dateEnd: today })
+      : Promise.resolve(null),
+    canViewEvents
+      ? getEvents({ page: 1, limit: 1, status: "active" })
+      : Promise.resolve(null),
+    canViewSessions
+      ? getSessions({ page: 1, limit: 6, from: today })
+      : Promise.resolve(null),
+    canViewSessions
+      ? getSessions({ page: 1, limit: 1, from: today, status: "pending" })
+      : Promise.resolve(null),
+    canViewRequests
+      ? getReservationRequests({ status: "pending" })
+      : Promise.resolve(null),
+    canViewTransactions
+      ? getSalesTransactions({ limit: 5 })
+      : Promise.resolve(null),
+  ]);
+
+  const statistics = statisticsResult?.ok ? statisticsResult.data : null;
+  const statisticsError =
+    statisticsResult && !statisticsResult.ok ? statisticsResult.message : "";
+
+  const activeEventsTotal = Number.isFinite(
+    activeEventsResult?.pagination?.total,
+  )
+    ? activeEventsResult.pagination.total
+    : null;
+  const upcomingSessions = Array.isArray(upcomingSessionsResult?.items)
+    ? upcomingSessionsResult.items
+    : [];
+  const upcomingSessionsTotal = Number.isFinite(
+    upcomingSessionsResult?.pagination?.total,
+  )
+    ? upcomingSessionsResult.pagination.total
+    : upcomingSessions.length;
+  const pendingSessionsCount = Number.isFinite(
+    pendingSessionsResult?.pagination?.total,
+  )
+    ? pendingSessionsResult.pagination.total
+    : 0;
+  const pendingRequests = Array.isArray(pendingRequestsResult?.items)
+    ? pendingRequestsResult.items
+    : [];
+  const pendingRequestsCount = pendingRequests.length;
+  const recentTransactions = Array.isArray(recentTransactionsResult?.items)
+    ? recentTransactionsResult.items.slice(0, 5)
+    : [];
+
+  const accessibleModulesCount = getAccessibleModulesCount(user);
+  const itemsToProcess = pendingSessionsCount + pendingRequestsCount;
+
+  const summaryCards = [
+    activeEventsTotal !== null
+      ? {
+          label: "Événements actifs",
+          value: formatNumber(activeEventsTotal),
+          description: "Programmation actuellement visible dans le système.",
+          icon: "theater",
+        }
+      : null,
+    statistics
+      ? {
+          label: "Séances du jour",
+          value: formatNumber(statistics?.totals?.sessionsCount || 0),
+          description: "Séances programmées a la date d'aujourd'hui.",
+          icon: "calendar",
+        }
+      : null,
+    statistics
+      ? {
+          label: "Billets vendus",
+          value: formatNumber(statistics?.totals?.soldTickets || 0),
+          description: "Ventes cumulees sur les séances du jour.",
+          icon: "activity",
+        }
+      : null,
+    statistics
+      ? {
+          label: "Recette du jour",
+          value: formatPrice(statistics?.totals?.revenue || 0),
+          description: "Montant cumule sur les séances du jour.",
+          icon: "money",
+        }
+      : null,
+    canViewRequests
+      ? {
+          label: "Demandes en attente",
+          value: formatNumber(pendingRequestsCount),
+          description: "Demandes d'espace encore non traitees.",
+          icon: "form",
+        }
+      : canViewSessions
+        ? {
+            label: "Séances à confirmer",
+            value: formatNumber(pendingSessionsCount),
+            description: "Séances encore en attente de validation.",
+            icon: "clock",
+          }
+        : null,
+  ].filter(Boolean);
+
+  const todayPlatforms = Array.isArray(statistics?.charts?.platforms)
+    ? statistics.charts.platforms
+    : [];
+  const totalPlatformTickets = todayPlatforms.reduce(
+    (sum, item) => sum + (Number(item?.ticketsSold) || 0),
+    0,
+  );
+  const platformRows = todayPlatforms.map((item) => {
+    const ticketsSold = Number(item?.ticketsSold) || 0;
+    const percent =
+      totalPlatformTickets > 0
+        ? Math.round((ticketsSold / totalPlatformTickets) * 100)
+        : 0;
+
+    return {
+      label: item?.label || "-",
+      ticketsSold,
+      percent,
+      revenue: Number(item?.revenue) || 0,
+    };
+  });
+
+  const subscriptionUsage = Array.isArray(statistics?.charts?.subscriptionUsage)
+    ? statistics.charts.subscriptionUsage.find(
+        (item) => item?.label === "Avec abonnement",
+      )
+    : null;
+  const promoUsage = Array.isArray(statistics?.charts?.promoUsage)
+    ? statistics.charts.promoUsage.find(
+        (item) => item?.label === "Avec code promo",
+      )
+    : null;
+
+  const attentionItems = [
+    canViewSessions
+      ? {
+          label: "Séances à venir",
+          value: formatNumber(upcomingSessionsTotal),
+          description: "Toutes les séances a partir d'aujourd'hui.",
+          href: "/seances",
+        }
+      : null,
+    canViewSessions
+      ? {
+          label: "Séances à confirmer",
+          value: formatNumber(pendingSessionsCount),
+          description: "Creation faite, confirmation encore attendue.",
+          href: "/seances?status=pending",
+        }
+      : null,
+    canViewRequests
+      ? {
+          label: "Demandes de réservation",
+          value: formatNumber(pendingRequestsCount),
+          description: "Demandes d'espace en attente de traitement.",
+          href: "/demandes-reservation",
+        }
+      : null,
+  ].filter(Boolean);
+
+  const quickLinks = QUICK_LINKS.filter((item) =>
+    hasDashboardPermission(user, item.module, "list"),
+  );
+  const heroActions = HERO_ACTIONS.filter((item) =>
+    hasDashboardPermission(user, item.module, "list"),
+  ).slice(0, 3);
+
+  const issues = Array.from(
+    new Set(
+      [
+        statisticsError,
+        activeEventsResult?.error,
+        upcomingSessionsResult?.error,
+        pendingSessionsResult?.error,
+        pendingRequestsResult?.error,
+        recentTransactionsResult?.error,
+      ].filter(Boolean),
+    ),
+  );
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-6">
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="relative">
+          <div className="absolute inset-y-0 right-0 hidden w-80 bg-gradient-to-l from-primary/10 via-primary/5 to-transparent lg:block" />
+          <div className="relative grid gap-8 px-6 py-6 lg:grid-cols-[1.35fr_0.9fr] lg:px-8 lg:py-8">
+            <div className="space-y-5">
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                <span className="h-2 w-2 rounded-full bg-primary" />
+                Centre de pilotage
+              </span>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <h1 className="font-secondary text-3xl font-semibold tracking-tight text-slate-900">
+                    Bienvenue, {user?.firstName || "Equipe"}.
+                  </h1>
+                </div>
+
+                {heroActions.length ? (
+                  <div className="flex flex-wrap gap-3">
+                    {heroActions.map((action, index) => (
+                      <Link
+                        key={action.href}
+                        href={action.href}
+                        className={
+                          index === 0
+                            ? "inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+                            : "inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-primary/30 hover:text-primary"
+                        }
+                      >
+                        <Icon name={action.icon} className="h-4 w-4" />
+                        <span>{action.label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
-            <div className="mt-4 flex items-end justify-between">
-              <h3 className="text-3xl font-semibold text-slate-900">
-                {stat.value}
-              </h3>
-              {stat.trendType === "up" ? (
-                <span className="flex items-center text-sm font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  <Icon name="trendingUp" className="h-4 w-4 mr-1" />
-                  {stat.trend}
-                </span>
-              ) : (
-                <span className="flex items-center text-sm font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                  <Icon name="minus" className="h-4 w-4 mr-1" />
-                  {stat.trend}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-up fade-up-delay-2">
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="font-secondary text-lg font-semibold text-slate-900">
-                Tendance des ventes hebdomadaires
-              </h3>
-              <p className="text-sm text-slate-500">
-                Performance des revenus sur les 7 derniers jours
-              </p>
-            </div>
-            <select className="bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 py-2 px-3 focus:ring-2 focus:ring-accent focus:outline-none cursor-pointer">
-              <option>7 derniers jours</option>
-              <option>30 derniers jours</option>
-            </select>
-          </div>
-          <div className="w-full h-64 relative">
-            <svg
-              className="w-full h-full overflow-visible text-primary"
-              preserveAspectRatio="none"
-              viewBox="0 0 500 150"
-              fill="none"
-            >
-              <defs>
-                <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="currentColor" stopOpacity="0.2" />
-                  <stop
-                    offset="100%"
-                    stopColor="currentColor"
-                    stopOpacity="0"
-                  />
-                </linearGradient>
-              </defs>
-              <line
-                stroke="#e2e8f0"
-                strokeWidth="1"
-                x1="0"
-                x2="500"
-                y1="150"
-                y2="150"
-              />
-              <line
-                stroke="#e2e8f0"
-                strokeDasharray="4 4"
-                strokeWidth="1"
-                x1="0"
-                x2="500"
-                y1="100"
-                y2="100"
-              />
-              <line
-                stroke="#e2e8f0"
-                strokeDasharray="4 4"
-                strokeWidth="1"
-                x1="0"
-                x2="500"
-                y1="50"
-                y2="50"
-              />
-              <line
-                stroke="#e2e8f0"
-                strokeDasharray="4 4"
-                strokeWidth="1"
-                x1="0"
-                x2="500"
-                y1="0"
-                y2="0"
-              />
-              <path
-                d="M0,120 Q50,110 100,80 T200,60 T300,90 T400,40 T500,20 V150 H0 Z"
-                fill="url(#chartGradient)"
-              />
-              <path
-                d="M0,120 Q50,110 100,80 T200,60 T300,90 T400,40 T500,20"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="3"
-              />
-              <circle
-                className="fill-white"
-                stroke="currentColor"
-                strokeWidth="2"
-                cx="100"
-                cy="80"
-                r="4"
-              />
-              <circle
-                className="fill-white"
-                stroke="currentColor"
-                strokeWidth="2"
-                cx="200"
-                cy="60"
-                r="4"
-              />
-              <circle
-                className="fill-white"
-                stroke="currentColor"
-                strokeWidth="2"
-                cx="300"
-                cy="90"
-                r="4"
-              />
-              <circle
-                className="fill-white"
-                stroke="currentColor"
-                strokeWidth="2"
-                cx="400"
-                cy="40"
-                r="4"
-              />
-            </svg>
-            <div className="flex justify-between mt-2 text-xs text-slate-400 font-medium px-1">
-              <span>Lun</span>
-              <span>Mar</span>
-              <span>Mer</span>
-              <span>Jeu</span>
-              <span>Ven</span>
-              <span>Sam</span>
-              <span>Dim</span>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  Aujourd&apos;hui
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">
+                  {formatLongDate(now)}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Mise à jour {formatCompactDateTime(now)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  Role
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">
+                  {roleLabel}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Espace admin principal
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  Modules accessibles
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">
+                  {formatNumber(accessibleModulesCount)}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Navigation adaptee a vos permissions
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  À traiter
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">
+                  {formatNumber(itemsToProcess)}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Séances en attente et demandes de réservation
+                </p>
+              </div>
             </div>
           </div>
         </div>
+      </section>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-          <h3 className="font-secondary text-lg font-semibold text-slate-900 mb-6">
-            Evenements populaires
-          </h3>
-          <div className="flex-1 space-y-6">
-            {POPULAR_EVENTS.map((event) => (
-              <div key={event.name} className="space-y-2">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="font-semibold text-slate-700">
-                    {event.name}
-                  </span>
-                  <span className="text-slate-500">{event.percent}% Vendu</span>
-                </div>
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${event.color} rounded-full`}
-                    style={{ width: `${event.percent}%` }}
-                  />
-                </div>
-              </div>
+      {issues.length ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <p className="font-semibold text-amber-800">
+            Certaines données n&apos;ont pas pu être chargees.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {issues.map((issue) => (
+              <li key={issue}>• {issue}</li>
             ))}
-          </div>
-          <button className="mt-6 w-full py-2 text-sm text-primary font-medium hover:bg-slate-50 rounded-lg transition-colors">
-            Voir tous les evenements
-          </button>
+          </ul>
+        </div>
+      ) : null}
+
+      {summaryCards.length ? (
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {summaryCards.map((card) => (
+            <SummaryCard key={card.label} {...card} />
+          ))}
+        </section>
+      ) : null}
+
+      <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+        {quickLinks.length ? (
+          <Panel
+            title="Accès rapides"
+            description="Raccourcis vers les modules les plus utiles pour demarrer."
+          >
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {quickLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition hover:border-primary/30 hover:bg-primary/5"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-primary shadow-sm ring-1 ring-slate-200 transition group-hover:ring-primary/20">
+                      <Icon name={item.icon} className="h-5 w-5" />
+                    </span>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 ring-1 ring-slate-200">
+                      Module
+                    </span>
+                  </div>
+                  <div className="mt-4 space-y-1">
+                    <p className="font-semibold text-slate-900">{item.label}</p>
+                    <p className="text-sm leading-6 text-slate-500">
+                      {item.description}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </Panel>
+        ) : null}
+
+        <div className="space-y-6">
+          {attentionItems.length ? (
+            <Panel
+              title="Points d'attention"
+              description="Les sujets qui demandent un passage rapide."
+            >
+              <div className="space-y-3">
+                {attentionItems.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:border-primary/30 hover:bg-primary/5"
+                  >
+                    <div className="space-y-1">
+                      <p className="font-semibold text-slate-900">
+                        {item.label}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {item.description}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-semibold tracking-tight text-slate-900">
+                        {item.value}
+                      </p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
+                        a vérifier
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Panel>
+          ) : null}
+
+          {canViewStatistics ? (
+            <Panel
+              title="Reperes du jour"
+              description="Lecture rapide des ventes sur les séances d'aujourd'hui."
+            >
+              <div className="space-y-5">
+                {platformRows.length ? (
+                  <div className="space-y-4">
+                    {platformRows.map((item) => (
+                      <div key={item.label} className="space-y-2">
+                        <div className="flex items-center justify-between gap-4 text-sm">
+                          <div>
+                            <p className="font-medium text-slate-900">
+                              {item.label}
+                            </p>
+                            <p className="text-slate-500">
+                              {formatNumber(item.ticketsSold)} billet(s) •{" "}
+                              {formatPrice(item.revenue)}
+                            </p>
+                          </div>
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                            {item.percent}%
+                          </span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${item.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    Aucune vente enregistrée sur les séances du jour pour le
+                    moment.
+                  </p>
+                )}
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Paiement abonnement
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-900">
+                      {formatNumber(subscriptionUsage?.bookingCount || 0)}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      transaction(s) •{" "}
+                      {formatNumber(subscriptionUsage?.ticketsSold || 0)}{" "}
+                      billet(s)
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Code promo
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-900">
+                      {formatNumber(promoUsage?.bookingCount || 0)}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      remise totale{" "}
+                      {formatPrice(promoUsage?.discountAmount || 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Panel>
+          ) : null}
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden fade-up fade-up-delay-3">
-        <div className="px-6 py-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h3 className="font-secondary text-lg font-semibold text-slate-900">
-              Activite recente
-            </h3>
-            <p className="text-sm text-slate-500">
-              Dernieres reservations et mises a jour systeme.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button className="px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-              Filtrer
-            </button>
-            <button className="px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-              Exporter
-            </button>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500 font-semibold uppercase text-xs tracking-wider">
-              <tr>
-                <th className="px-6 py-4">ID Transaction</th>
-                <th className="px-6 py-4">Client</th>
-                <th className="px-6 py-4">Evenement / Film</th>
-                <th className="px-6 py-4">Heure</th>
-                <th className="px-6 py-4">Statut</th>
-                <th className="px-6 py-4 text-right">Montant</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 text-slate-600">
-              {RECENT_ACTIVITY.map((row) => {
-                const status = STATUS_STYLES[row.status];
+      <div className="grid gap-6 xl:grid-cols-2">
+        {canViewSessions ? (
+          <Panel
+            title="Séances a surveiller"
+            description="Prochaines séances programmées a partir d'aujourd'hui."
+            action={
+              <Link
+                href="/seances"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-primary/30 hover:text-primary"
+              >
+                <span>Voir tout</span>
+                <Icon name="chevronLeft" className="h-4 w-4 rotate-180" />
+              </Link>
+            }
+          >
+            {upcomingSessions.length ? (
+              <div className="space-y-3">
+                {upcomingSessions.map((session) => {
+                  const ticketSummary = getTicketSummary(session);
+
+                  return (
+                    <Link
+                      key={session.id}
+                      href={
+                        session.eventId
+                          ? `/evenements/${session.eventId}`
+                          : "/seances"
+                      }
+                      className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:border-primary/30 hover:bg-primary/5"
+                    >
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold ring-1 ring-slate-200 ${session?.statusMeta?.color || "text-slate-500"}`}
+                          >
+                            <span
+                              className={`h-2 w-2 rounded-full ${session?.statusMeta?.dot || "bg-slate-400"}`}
+                            />
+                            {session?.statusMeta?.label || "Programme"}
+                          </span>
+                          {session.roomName ? (
+                            <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
+                              {session.roomName}
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div>
+                          <p className="truncate font-semibold text-slate-900">
+                            {session.eventName || "Séance"}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {session.dateLabel || formatDate(session.date)} •{" "}
+                            {session.timeLabel || session.sessionTime || "-"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-semibold text-slate-900">
+                          {ticketSummary.soldTicketsLabel}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {ticketSummary.remainingTicketsLabel}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">
+                Aucune séance à venir pour le moment.
+              </p>
+            )}
+          </Panel>
+        ) : null}
+
+        {canViewTransactions ? (
+          <Panel
+            title="Dernières transactions"
+            description="Derniers bookings visibles depuis le dashboard."
+            action={
+              <Link
+                href="/ventes/transactions"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-primary/30 hover:text-primary"
+              >
+                <span>Voir tout</span>
+                <Icon name="chevronLeft" className="h-4 w-4 rotate-180" />
+              </Link>
+            }
+          >
+            {recentTransactions.length ? (
+              <div className="space-y-3">
+                {recentTransactions.map((booking) => (
+                  <Link
+                    key={booking.id}
+                    href={
+                      booking.id
+                        ? `/ventes/transactions/${booking.id}`
+                        : "/ventes/transactions"
+                    }
+                    className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:border-primary/30 hover:bg-primary/5"
+                  >
+                    <div className="min-w-0 space-y-2">
+                      <div>
+                        <p className="font-semibold text-slate-900">
+                          {booking.bookingNumber || "-"}
+                        </p>
+                        <p className="truncate text-sm text-slate-500">
+                          {formatSessionLabel(booking.session)}
+                        </p>
+                      </div>
+                      <p className="text-sm text-slate-500">
+                        {formatBookingActor(booking)}
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <p className="font-semibold text-slate-900">
+                        {formatPrice(booking.totalAmount)}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {formatDateTime(booking.createdAt)}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">
+                Aucune transaction visible pour le moment.
+              </p>
+            )}
+          </Panel>
+        ) : null}
+      </div>
+
+      {canViewRequests ? (
+        <Panel
+          title="Dernières demandes de réservation"
+          description="Demandes d'espace encore en attente de traitement."
+          action={
+            <Link
+              href="/demandes-reservation"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-primary/30 hover:text-primary"
+            >
+              <span>Voir tout</span>
+              <Icon name="chevronLeft" className="h-4 w-4 rotate-180" />
+            </Link>
+          }
+        >
+          {pendingRequests.length ? (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {pendingRequests.slice(0, 4).map((item) => {
+                const fullName = `${item.firstName || ""} ${
+                  item.lastName || ""
+                }`.trim();
 
                 return (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-slate-50 transition-colors"
+                  <Link
+                    key={item._id}
+                    href={`/demandes-reservation/${item._id}`}
+                    className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:border-primary/30 hover:bg-primary/5"
                   >
-                    <td className="px-6 py-4 font-mono text-slate-500">
-                      {row.id}
-                    </td>
-                    <td className="px-6 py-4 font-medium text-slate-900">
-                      {row.customer}
-                    </td>
-                    <td className="px-6 py-4">{row.movie}</td>
-                    <td className="px-6 py-4 text-slate-500">{row.time}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${status.badge}`}
-                      >
-                        <span
-                          className={`size-1.5 rounded-full ${status.dot}`}
-                        />
-                        {status.label}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-900">
+                          {fullName || "-"}
+                        </p>
+                        <p className="mt-1 truncate text-sm text-slate-500">
+                          {item.email || "-"}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                        En attente
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-slate-900">
-                      {row.amount}
-                    </td>
-                  </tr>
+                    </div>
+
+                    <div className="mt-4 space-y-1 text-sm text-slate-500">
+                      <p>
+                        Réservation souhaitee le{" "}
+                        <span className="font-medium text-slate-700">
+                          {formatDateTime(item.reservationDateTime)}
+                        </span>
+                      </p>
+                      <p>Créée le {formatCompactDateTime(item.createdAt)}</p>
+                    </div>
+                  </Link>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Aucune demande en attente pour le moment.
+            </p>
+          )}
+        </Panel>
+      ) : null}
     </div>
   );
 }

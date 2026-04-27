@@ -1,7 +1,9 @@
+import DashboardAccessDenied from "@/components/dashboard/access-denied";
 import Link from "next/link";
 
 import { Icon } from "@/components/ui/icons";
 import { formatDate, formatDateTime, formatPrice } from "@/lib/configurations/formatters";
+import { canAccessDashboardPermission } from "@/services/dashboard-auth";
 import { getSalesTransactions } from "@/services/sales";
 
 const formatSessionDateOnly = (value) => {
@@ -25,7 +27,7 @@ const formatSessionLabel = (session) => {
     return "-";
   }
 
-  const eventName = session.event?.name || "Seance";
+  const eventName = session.event?.name || "Séance";
   const dateLabel = formatSessionDateOnly(session.date);
   const timeLabel = session.sessionTime || "";
 
@@ -71,6 +73,17 @@ const formatBookingActor = (booking) => {
 };
 
 export default async function TransactionsPage() {
+  const canList = await canAccessDashboardPermission(
+    "sales_transactions",
+    "list",
+  );
+
+  if (!canList) {
+    return (
+      <DashboardAccessDenied message="Vous n'avez pas la permission de consulter les transactions." />
+    );
+  }
+
   const { items, error } = await getSalesTransactions({ limit: 200 });
 
   return (
@@ -78,7 +91,7 @@ export default async function TransactionsPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-slate-900">Transactions</h1>
         <p className="text-sm text-slate-500">
-          Derniers bookings enregistres dans le systeme.
+          Derniers bookings enregistrés dans le système.
         </p>
       </div>
 
@@ -94,7 +107,7 @@ export default async function TransactionsPage() {
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4 text-left font-semibold">Booking</th>
-                <th className="px-6 py-4 text-left font-semibold">Seance</th>
+                <th className="px-6 py-4 text-left font-semibold">Séance</th>
                 <th className="px-6 py-4 text-left font-semibold">
                   Effectue par
                 </th>
@@ -139,7 +152,7 @@ export default async function TransactionsPage() {
                         <Link
                           href={`/ventes/transactions/${booking.id}`}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-primary"
-                          aria-label="Voir le detail du booking"
+                          aria-label="Voir le détail du booking"
                           title="Voir le detail"
                         >
                           <Icon name="eye" className="h-4 w-4" />

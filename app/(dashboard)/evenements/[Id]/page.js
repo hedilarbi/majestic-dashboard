@@ -1,3 +1,4 @@
+import DashboardAccessDenied from "@/components/dashboard/access-denied";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -5,6 +6,7 @@ import { Icon } from "@/components/ui/icons";
 import EventEditTrigger from "@/components/evenements/event-edit-trigger";
 import SessionModalTrigger from "@/components/evenements/session-modal-trigger";
 import SessionsTable from "@/components/evenements/sessions-table";
+import { hasDashboardPermission } from "@/lib/dashboard-permissions";
 import {
   STATUS_LABELS,
   STATUS_STYLES,
@@ -16,9 +18,18 @@ import {
   getEventSessions,
   getSessionFormData,
 } from "@/services/evenements";
+import { getDashboardUser } from "@/services/dashboard-auth";
 import { getShowTypes } from "@/services/show-types";
 
 export default async function EventDetailsPage({ params }) {
+  const user = await getDashboardUser();
+
+  if (!hasDashboardPermission(user, "events", "list")) {
+    return (
+      <DashboardAccessDenied message="Vous n'avez pas la permission de consulter les événements." />
+    );
+  }
+
   const resolvedParams = await params;
   const eventId = resolvedParams?.Id || resolvedParams?.id;
 
@@ -29,6 +40,8 @@ export default async function EventDetailsPage({ params }) {
       </div>
     );
   }
+
+  const canListSessions = hasDashboardPermission(user, "sessions", "list");
 
   const [
     { event, error },
@@ -44,8 +57,19 @@ export default async function EventDetailsPage({ params }) {
     { items: showTypes, error: showTypesError },
   ] = await Promise.all([
     getEventDetails(eventId),
-    getEventSessions(eventId),
-    getSessionFormData(),
+    canListSessions
+      ? getEventSessions(eventId)
+      : Promise.resolve({ sessions: [], error: "" }),
+    canListSessions
+      ? getSessionFormData()
+      : Promise.resolve({
+          rooms: [],
+          sessionTimes: [],
+          pricing: [],
+          roomsError: "",
+          sessionTimesError: "",
+          pricingError: "",
+        }),
     getShowTypes(),
   ]);
 
@@ -230,55 +254,59 @@ export default async function EventDetailsPage({ params }) {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold text-primary">
-              Séances programmées
-            </h2>
-            <p className="text-sm text-accent">
-              Liste des séances reliées à cet événement.
-            </p>
+      {canListSessions ? (
+        <section className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold text-primary">
+                Séances programmées
+              </h2>
+              <p className="text-sm text-accent">
+                Liste des séances reliées à cet événement.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              >
+                <Icon name="filter" className="h-4 w-4" />
+                Filtrer
+              </button>
+              <SessionModalTrigger
+                label="Ajouter une séance"
+                event={event}
+                rooms={rooms}
+                sessionTimes={sessionTimes}
+                pricing={pricing}
+                roomsError={roomsError}
+                sessionTimesError={sessionTimesError}
+                pricingError={pricingError}
+              />
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-            >
-              <Icon name="filter" className="h-4 w-4" />
-              Filtrer
-            </button>
-            <SessionModalTrigger
-              label="Ajouter une séance"
-              event={event}
-              rooms={rooms}
-              sessionTimes={sessionTimes}
-              pricing={pricing}
-              roomsError={roomsError}
-              sessionTimesError={sessionTimesError}
-              pricingError={pricingError}
-            />
-          </div>
-        </div>
 
-        {sessionsError ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            {sessionsError}
-          </div>
-        ) : null}
+          {sessionsError ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              {sessionsError}
+            </div>
+          ) : null}
 
-        <SessionsTable
-          sessions={sessions}
-          eventId={eventId}
-          event={event}
-          rooms={rooms}
-          sessionTimes={sessionTimes}
-          pricing={pricing}
-          roomsError={roomsError}
-          sessionTimesError={sessionTimesError}
-          pricingError={pricingError}
-        />
-      </section>
+          <SessionsTable
+            sessions={sessions}
+            eventId={eventId}
+            event={event}
+            rooms={rooms}
+            sessionTimes={sessionTimes}
+            pricing={pricing}
+            roomsError={roomsError}
+            sessionTimesError={sessionTimesError}
+            pricingError={pricingError}
+          />
+        </section>
+      ) : (
+        <DashboardAccessDenied message="Vous pouvez consulter cet événement mais pas ses séances." />
+      )}
     </div>
   );
 }

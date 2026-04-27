@@ -11,7 +11,7 @@ import { getSalesBookingDetails } from "@/services/sales";
 
 const BOOKING_SOURCE_LABELS = {
   web: "Web",
-  mobile: "Mobile",
+  mobile: "Web",
   ticket_office: "Guichet",
 };
 
@@ -43,7 +43,7 @@ const formatSessionLabel = (session) => {
     return "-";
   }
 
-  const eventName = session.event?.name || "Seance";
+  const eventName = session.event?.name || "Séance";
   const dateLabel = formatSessionDateOnly(session.date);
   const timeLabel = session.sessionTime || "";
 
@@ -142,7 +142,7 @@ export default async function TransactionDetailsPage({ params }) {
           <Icon name="chevronLeft" className="h-4 w-4" />
         </Link>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-          {error || "Impossible de charger le detail du booking."}
+          {error || "Impossible de charger le détail du booking."}
         </div>
       </div>
     );
@@ -175,7 +175,7 @@ export default async function TransactionDetailsPage({ params }) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Seance
+            Séance
           </p>
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {formatSessionLabel(booking.session)}
@@ -204,6 +204,11 @@ export default async function TransactionDetailsPage({ params }) {
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {formatPrice(booking.totalAmount)}
           </p>
+          {booking.promotion?.amountBeforeDiscount && (
+            <p className="mt-1 text-xs text-slate-400 line-through">
+              {formatPrice(booking.promotion.amountBeforeDiscount)}
+            </p>
+          )}
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -218,7 +223,7 @@ export default async function TransactionDetailsPage({ params }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Places
@@ -227,9 +232,31 @@ export default async function TransactionDetailsPage({ params }) {
             {seats.length ? seats.map(formatSeatLabel).join(", ") : "-"}
           </p>
         </div>
+        {booking.promotion ? (
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/30 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600/80">
+              Code Promo utilisé
+            </p>
+            <p className="mt-2 text-sm font-bold text-emerald-700">
+              {booking.promotion.code}
+            </p>
+            <p className="mt-1 text-xs font-semibold text-emerald-600">
+              Réduction : -{formatPrice(booking.promotion.discountAmount)}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Promotion
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-400 italic">
+              Aucun code promo
+            </p>
+          </div>
+        )}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Date de creation
+            Date de création
           </p>
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {formatDateTime(booking.createdAt)}
@@ -251,7 +278,7 @@ export default async function TransactionDetailsPage({ params }) {
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4 text-left font-semibold">Code</th>
-                <th className="px-6 py-4 text-left font-semibold">Siege</th>
+                <th className="px-6 py-4 text-left font-semibold">Siège</th>
                 <th className="px-6 py-4 text-left font-semibold">Tarif</th>
                 <th className="px-6 py-4 text-left font-semibold">Prix</th>
                 <th className="px-6 py-4 text-left font-semibold">Statut</th>
@@ -269,7 +296,7 @@ export default async function TransactionDetailsPage({ params }) {
                 </tr>
               ) : (
                 tickets.map((ticket) => {
-                  const statusMeta = getTicketStatusMeta(ticket.isScanned);
+                  const statusMeta = getTicketStatusMeta(ticket);
 
                   return (
                     <tr key={ticket.id || ticket.code} className="hover:bg-slate-50">
@@ -294,6 +321,10 @@ export default async function TransactionDetailsPage({ params }) {
                         {ticket.scannedAt ? (
                           <div className="mt-1 text-xs text-slate-500">
                             Scanne le {formatDateTime(ticket.scannedAt)}
+                          </div>
+                        ) : ticket.cancelledAt ? (
+                          <div className="mt-1 text-xs text-slate-500">
+                            Annule le {formatDateTime(ticket.cancelledAt)}
                           </div>
                         ) : null}
                       </td>

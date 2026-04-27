@@ -27,7 +27,7 @@ export const getSalesTransactions = async ({ page, limit } = {}) => {
   if (!auth.ok) {
     return {
       items: [],
-      error: auth.message || "Non authentifie.",
+      error: auth.message || "Non authentifié.",
       status: resolveAuthStatus(auth.message),
     };
   }
@@ -59,7 +59,7 @@ export const getSalesBookingDetails = async (bookingId) => {
   if (!auth.ok) {
     return {
       booking: null,
-      error: auth.message || "Non authentifie.",
+      error: auth.message || "Non authentifié.",
       status: resolveAuthStatus(auth.message),
     };
   }
@@ -91,7 +91,7 @@ export const getSalesTickets = async ({ page, limit } = {}) => {
   if (!auth.ok) {
     return {
       items: [],
-      error: auth.message || "Non authentifie.",
+      error: auth.message || "Non authentifié.",
       status: resolveAuthStatus(auth.message),
     };
   }
@@ -123,7 +123,7 @@ export const getSalesSubscriptions = async ({ page, limit } = {}) => {
   if (!auth.ok) {
     return {
       items: [],
-      error: auth.message || "Non authentifie.",
+      error: auth.message || "Non authentifié.",
       status: resolveAuthStatus(auth.message),
     };
   }

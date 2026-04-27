@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icons";
 import Modal from "@/components/ui/modal";
 import Toast from "@/components/ui/toast";
+import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { TIME_PATTERN } from "@/lib/configurations/validators";
 import {
@@ -19,6 +20,7 @@ export default function HorairesSeancesClient({
   initialError = "",
 }) {
   const router = useRouter();
+  const permissions = useDashboardModulePermissions("session_times");
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -166,14 +168,16 @@ export default function HorairesSeancesClient({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
-            >
-              <Icon name="plus" className="h-5 w-5" />
-              Ajouter un horaire
-            </button>
+            {permissions.canCreate ? (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+              >
+                <Icon name="plus" className="h-5 w-5" />
+                Ajouter un horaire
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -219,22 +223,26 @@ export default function HorairesSeancesClient({
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-3">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(item)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
-                            aria-label="Modifier"
-                          >
-                            <Icon name="pen" className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPendingDelete(item)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
-                            aria-label="Supprimer"
-                          >
-                            <Icon name="trash" className="h-4 w-4" />
-                          </button>
+                          {permissions.canUpdate ? (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(item)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
+                              aria-label="Modifier"
+                            >
+                              <Icon name="pen" className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                          {permissions.canDelete ? (
+                            <button
+                              type="button"
+                              onClick={() => setPendingDelete(item)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
+                              aria-label="Supprimer"
+                            >
+                              <Icon name="trash" className="h-4 w-4" />
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -245,7 +253,7 @@ export default function HorairesSeancesClient({
           )}
         </div>
 
-        {isCreateOpen ? (
+        {isCreateOpen && permissions.canCreate ? (
           <Modal
             title="Ajouter un horaire"
             description="Définis l'heure au format HH:mm."
@@ -293,7 +301,7 @@ export default function HorairesSeancesClient({
           </Modal>
         ) : null}
 
-        {isEditOpen ? (
+        {isEditOpen && permissions.canUpdate ? (
           <Modal
             title="Modifier l'horaire"
             description="Mets à jour l'heure au format HH:mm."
@@ -341,7 +349,7 @@ export default function HorairesSeancesClient({
           </Modal>
         ) : null}
 
-        {pendingDelete ? (
+        {pendingDelete && permissions.canDelete ? (
           <Modal
             title="Supprimer l'horaire"
             description={`Confirmer la suppression de l'horaire ${pendingDelete.time} ?`}

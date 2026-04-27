@@ -13,9 +13,11 @@ export default function SeanceAside({
   timeLeftMs,
   isCancelling,
   checkoutHref,
+  isActionPending,
   isActionDisabled,
   onCancelReservation,
 }) {
+  const safeSeance = seance || {};
   const items = pricingItems?.length ? pricingItems : [];
   const fixedGroups = fixedPricingGroups?.length ? fixedPricingGroups : [];
 
@@ -45,24 +47,28 @@ export default function SeanceAside({
         <div className="flex gap-5">
           <div
             className="w-24 h-36 shrink-0 rounded-xl bg-cover bg-center shadow-md border border-slate-100"
-            style={{ backgroundImage: `url(${seance.poster})` }}
+            style={{
+              backgroundImage: safeSeance.poster
+                ? `url(${safeSeance.poster})`
+                : "none",
+            }}
           />
           <div className="flex flex-col justify-center">
             <h1 className="text-xl font-secondary text-slate-900 leading-tight mb-3 uppercase">
-              {seance.title}
+              {safeSeance.title || "Séance"}
             </h1>
             <div className="space-y-2 text-sm text-slate-600">
               <div className="flex items-center gap-2">
                 <Icon name="calendar" className="h-4 w-4 text-primary" />
-                <span>{seance.date}</span>
+                <span>{safeSeance.date || "-"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Icon name="clock" className="h-4 w-4 text-primary" />
-                <span>{seance.time}</span>
+                <span>{safeSeance.time || "-"}</span>
               </div>
               {/* <div className="flex items-center gap-2">
                 <Icon name="seat" className="h-4 w-4 text-primary" />
-                <span>{seance.room}</span>
+                <span>{safeSeance.room}</span>
               </div> */}
             </div>
           </div>
@@ -148,14 +154,14 @@ export default function SeanceAside({
           <button
             type="button"
             onClick={onCancelReservation}
-            disabled={isCancelling}
+            disabled={isCancelling || isActionPending}
             className="w-full mb-3 py-3 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold tracking-widest hover:border-primary hover:text-primary transition disabled:opacity-60 disabled:cursor-not-allowed"
           >
             Annuler
           </button>
         ) : null}
 
-        {myReservation ? (
+        {myReservation && !isActionDisabled ? (
           <Link
             href={checkoutHref}
             className="w-full py-4 rounded-xl bg-primary text-white font-semibold tracking-widest flex items-center justify-center gap-3 hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
@@ -169,7 +175,7 @@ export default function SeanceAside({
             disabled={isActionDisabled}
             className="w-full py-4 rounded-xl bg-primary text-white font-semibold tracking-widest flex items-center justify-center gap-3 hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Valider la sélection
+            {isActionPending ? "Mise à jour..." : "Valider la sélection"}
             <Icon name="chevronDown" className="h-4 w-4 rotate-[-90deg]" />
           </button>
         )}

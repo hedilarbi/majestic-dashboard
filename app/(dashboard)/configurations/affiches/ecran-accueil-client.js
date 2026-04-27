@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icons";
 import Modal from "@/components/ui/modal";
 import Toast from "@/components/ui/toast";
+import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions";
 import { useToast } from "@/hooks/use-toast";
 import {
   createHomeHero,
@@ -71,6 +72,7 @@ export default function EcranAccueilClient({
   eventsError = "",
 }) {
   const router = useRouter();
+  const permissions = useDashboardModulePermissions("home_hero");
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -472,14 +474,16 @@ export default function EcranAccueilClient({
             <p className="text-slate-500 mt-1">{TEXT.subtitle}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
-            >
-              <Icon name="plus" className="h-5 w-5" />
-              Ajouter une slide
-            </button>
+            {permissions.canCreate ? (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+              >
+                <Icon name="plus" className="h-5 w-5" />
+                Ajouter une slide
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -544,7 +548,7 @@ export default function EcranAccueilClient({
                         className={`transition-colors ${
                           isDragOver ? "bg-primary/5" : "hover:bg-slate-50"
                         } ${isDragging ? "opacity-70" : ""}`}
-                        draggable={!isSwapping}
+                        draggable={permissions.canUpdate && !isSwapping}
                         onDragStart={(event) => handleDragStart(event, item.id)}
                         onDragEnd={handleDragEnd}
                         onDragOver={(event) => handleDragOver(event, item.id)}
@@ -555,7 +559,7 @@ export default function EcranAccueilClient({
                           <button
                             type="button"
                             className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition ${
-                              isSwapping
+                              !permissions.canUpdate || isSwapping
                                 ? "cursor-not-allowed opacity-50"
                                 : "cursor-grab hover:border-primary/40 hover:text-primary"
                             }`}
@@ -607,12 +611,16 @@ export default function EcranAccueilClient({
                               aria-checked={item.active}
                               onClick={() => handleToggleActive(item)}
                               disabled={
-                                isSwapping || activeUpdatingId === item.id
+                                !permissions.canUpdate ||
+                                isSwapping ||
+                                activeUpdatingId === item.id
                               }
                               className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                                 item.active ? "bg-emerald-500" : "bg-slate-300"
                               } ${
-                                isSwapping || activeUpdatingId === item.id
+                                !permissions.canUpdate ||
+                                isSwapping ||
+                                activeUpdatingId === item.id
                                   ? "cursor-not-allowed opacity-70"
                                   : "hover:opacity-90"
                               }`}
@@ -636,7 +644,9 @@ export default function EcranAccueilClient({
                               checked={item.movieAffiche === true}
                               onChange={() => handleToggleMovieAffiche(item)}
                               disabled={
-                                isSwapping || afficheUpdatingId === item.id
+                                !permissions.canUpdate ||
+                                isSwapping ||
+                                afficheUpdatingId === item.id
                               }
                             />
                             Affiche Film
@@ -650,7 +660,9 @@ export default function EcranAccueilClient({
                               checked={item.showAffiche === true}
                               onChange={() => handleToggleShowAffiche(item)}
                               disabled={
-                                isSwapping || afficheUpdatingId === item.id
+                                !permissions.canUpdate ||
+                                isSwapping ||
+                                afficheUpdatingId === item.id
                               }
                             />
                             Affiche Spectacle
@@ -658,22 +670,26 @@ export default function EcranAccueilClient({
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-3">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(item)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
-                              aria-label="Modifier"
-                            >
-                              <Icon name="pen" className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPendingDelete(item)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
-                              aria-label="Supprimer"
-                            >
-                              <Icon name="trash" className="h-4 w-4" />
-                            </button>
+                            {permissions.canUpdate ? (
+                              <button
+                                type="button"
+                                onClick={() => openEditModal(item)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
+                                aria-label="Modifier"
+                              >
+                                <Icon name="pen" className="h-4 w-4" />
+                              </button>
+                            ) : null}
+                            {permissions.canDelete ? (
+                              <button
+                                type="button"
+                                onClick={() => setPendingDelete(item)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
+                                aria-label="Supprimer"
+                              >
+                                <Icon name="trash" className="h-4 w-4" />
+                              </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -685,7 +701,7 @@ export default function EcranAccueilClient({
           )}
         </div>
 
-        {isCreateOpen ? (
+        {isCreateOpen && permissions.canCreate ? (
           <Modal
             title="Ajouter une slide"
             description="Renseigne les informations du hero."
@@ -807,7 +823,7 @@ export default function EcranAccueilClient({
           </Modal>
         ) : null}
 
-        {isEditOpen ? (
+        {isEditOpen && permissions.canUpdate ? (
           <Modal
             title="Modifier la slide"
             description="Mets à jour le contenu du hero."
@@ -929,7 +945,7 @@ export default function EcranAccueilClient({
           </Modal>
         ) : null}
 
-        {pendingDelete ? (
+        {pendingDelete && permissions.canDelete ? (
           <Modal
             title="Supprimer la slide"
             description={`Confirmer la suppression de "${

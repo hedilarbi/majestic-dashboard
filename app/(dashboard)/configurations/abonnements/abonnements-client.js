@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icons";
 import Modal from "@/components/ui/modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import Toast from "@/components/ui/toast";
+import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/configurations/formatters";
 import { formatDate, toDateInputValue } from "@/lib/evenements/helpers";
@@ -39,6 +40,7 @@ export default function AbonnementsClient({
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
+  const permissions = useDashboardModulePermissions("subscriptions");
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -301,18 +303,20 @@ export default function AbonnementsClient({
               Abonnements
             </h1>
             <p className="text-slate-500 mt-1">
-              Gérez les formules d'abonnement et leurs crédits.
+              Gérez les formules d&apos;abonnement et leurs crédits.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
-            >
-              <Icon name="plus" className="h-5 w-5" />
-              Ajouter un abonnement
-            </button>
+            {permissions.canCreate ? (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+              >
+                <Icon name="plus" className="h-5 w-5" />
+                Ajouter un abonnement
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -392,11 +396,11 @@ export default function AbonnementsClient({
                               role="switch"
                               aria-checked={isActive}
                               onClick={() => handleToggleStatus(item)}
-                              disabled={statusUpdatingId === item.id}
+                              disabled={!permissions.canUpdate || statusUpdatingId === item.id}
                               className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                                 isActive ? "bg-emerald-500" : "bg-slate-300"
                               } ${
-                                statusUpdatingId === item.id
+                                !permissions.canUpdate || statusUpdatingId === item.id
                                   ? "cursor-not-allowed opacity-70"
                                   : "hover:opacity-90"
                               }`}
@@ -412,22 +416,26 @@ export default function AbonnementsClient({
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-3">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(item)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
-                              aria-label="Modifier"
-                            >
-                              <Icon name="pen" className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPendingDelete(item)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
-                              aria-label="Supprimer"
-                            >
-                              <Icon name="trash" className="h-4 w-4" />
-                            </button>
+                            {permissions.canUpdate ? (
+                              <button
+                                type="button"
+                                onClick={() => openEditModal(item)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
+                                aria-label="Modifier"
+                              >
+                                <Icon name="pen" className="h-4 w-4" />
+                              </button>
+                            ) : null}
+                            {permissions.canDelete ? (
+                              <button
+                                type="button"
+                                onClick={() => setPendingDelete(item)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
+                                aria-label="Supprimer"
+                              >
+                                <Icon name="trash" className="h-4 w-4" />
+                              </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -439,7 +447,7 @@ export default function AbonnementsClient({
           )}
         </div>
 
-        {isCreateOpen ? (
+        {isCreateOpen && permissions.canCreate ? (
           <Modal
             title="Ajouter un abonnement"
             description="Crée une nouvelle formule d'abonnement."
@@ -491,7 +499,7 @@ export default function AbonnementsClient({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Date d'expiration
+                  Date d&apos;expiration
                 </label>
                 <input
                   name="expirationDate"
@@ -552,7 +560,7 @@ export default function AbonnementsClient({
           </Modal>
         ) : null}
 
-        {isEditOpen ? (
+        {isEditOpen && permissions.canUpdate ? (
           <Modal
             title="Modifier l'abonnement"
             description="Mettez à jour la formule d'abonnement."
@@ -604,7 +612,7 @@ export default function AbonnementsClient({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Date d'expiration
+                  Date d&apos;expiration
                 </label>
                 <input
                   name="expirationDate"
@@ -665,7 +673,7 @@ export default function AbonnementsClient({
           </Modal>
         ) : null}
 
-        {pendingDelete ? (
+        {pendingDelete && permissions.canDelete ? (
           <ConfirmModal
             title="Supprimer l'abonnement"
             description={`Confirmer la suppression de "${

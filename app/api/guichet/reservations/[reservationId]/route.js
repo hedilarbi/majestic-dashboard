@@ -11,14 +11,14 @@ export async function DELETE(_request, { params }) {
 
   if (!auth.ok) {
     return NextResponse.json(
-      { message: auth.message || "Non authentifie." },
+      { message: auth.message || "Non authentifié." },
       { status: resolveAuthStatus(auth.message) },
     );
   }
 
   if (!reservationId) {
     return NextResponse.json(
-      { message: "Reservation invalide." },
+      { message: "Réservation invalide." },
       { status: 400 },
     );
   }
@@ -37,7 +37,7 @@ export async function DELETE(_request, { params }) {
     return NextResponse.json(data, { status: response.status });
   } catch {
     return NextResponse.json(
-      { message: "Impossible d'annuler la reservation." },
+      { message: "Impossible d'annuler la réservation." },
       { status: 502 },
     );
   }

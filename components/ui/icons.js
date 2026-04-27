@@ -59,6 +59,26 @@ const ICONS = {
       <path d="M8 10h8M8 14h8" />
     </>
   ),
+  article: (
+    <>
+      <path d="M6 4h9l3 3v13a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z" />
+      <path d="M15 4v4h4" />
+      <path d="M8 12h8M8 16h8M8 8h3" />
+    </>
+  ),
+  video: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M10 9.5v5l5-2.5-5-2.5z" />
+    </>
+  ),
+  form: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 8h8M8 12h8M8 16h5" />
+      <path d="M6.5 8h.01M6.5 12h.01M6.5 16h.01" />
+    </>
+  ),
   money: (
     <>
       <path d="M12 3v18" />

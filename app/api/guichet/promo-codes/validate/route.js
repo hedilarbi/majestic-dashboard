@@ -10,7 +10,7 @@ export async function POST(request) {
 
   if (!auth.ok) {
     return NextResponse.json(
-      { message: auth.message || "Non authentifie." },
+      { message: auth.message || "Non authentifié." },
       { status: resolveAuthStatus(auth.message) },
     );
   }

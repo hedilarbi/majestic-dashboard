@@ -11,7 +11,7 @@ export async function GET(_request, { params }) {
 
   if (!auth.ok) {
     return NextResponse.json(
-      { message: auth.message || "Non authentifie." },
+      { message: auth.message || "Non authentifié." },
       { status: resolveAuthStatus(auth.message) },
     );
   }
@@ -33,7 +33,7 @@ export async function GET(_request, { params }) {
     return NextResponse.json(data, { status: response.status });
   } catch {
     return NextResponse.json(
-      { message: "Impossible de charger la reservation." },
+      { message: "Impossible de charger la réservation." },
       { status: 502 },
     );
   }

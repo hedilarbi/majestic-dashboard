@@ -1,11 +1,12 @@
 import Link from "next/link";
 
+import GuichetBookingCancelAction from "@/components/guichet/GuichetBookingCancelAction";
 import { Icon } from "@/components/ui/icons";
 import {
   formatDate,
   formatDateTime,
-  formatPrice,
-} from "@/lib/configurations/formatters";
+  formatPrice } from
+"@/lib/configurations/formatters";
 import { getTicketStatusMeta } from "@/lib/configurations/ticket-status";
 import { getGuichetBookingDetails } from "@/services/guichet-booking-details";
 
@@ -30,7 +31,7 @@ const formatSessionLabel = (session) => {
     return "-";
   }
 
-  const eventName = session.event?.name || "Seance";
+  const eventName = session.event?.name || "Séance";
   const dateLabel = formatSessionDateOnly(session.date);
   const timeLabel = session.sessionTime || "";
 
@@ -56,19 +57,30 @@ export default async function GuichetBookingDetailsPage({ params }) {
         <Link
           href="/guichet/historique"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
-          aria-label="Retour a l'historique"
-        >
+          aria-label="Retour a l'historique">
+
           <Icon name="chevronLeft" className="h-4 w-4" />
         </Link>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-          {message || "Impossible de charger le detail du booking."}
+          {message || "Impossible de charger le détail du booking."}
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   const tickets = Array.isArray(booking.tickets) ? booking.tickets : [];
   const seats = Array.isArray(booking.seats) ? booking.seats : [];
+  const cancellableTickets = tickets.filter((ticket) => {
+    const statusMeta = getTicketStatusMeta(ticket);
+    return statusMeta.code === "not_scanned";
+  });
+  const nonCancelledTickets = tickets.filter((ticket) => {
+    const statusMeta = getTicketStatusMeta(ticket);
+    return statusMeta.code !== "cancelled";
+  });
+  const canCancelEntireSale =
+  cancellableTickets.length > 0 &&
+  cancellableTickets.length === nonCancelledTickets.length;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -76,8 +88,8 @@ export default async function GuichetBookingDetailsPage({ params }) {
         <Link
           href="/guichet/historique"
           className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
-          aria-label="Retour a l'historique"
-        >
+          aria-label="Retour a l'historique">
+
           <Icon name="chevronLeft" className="h-4 w-4" />
         </Link>
         <div className="min-w-0">
@@ -93,7 +105,7 @@ export default async function GuichetBookingDetailsPage({ params }) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Seance
+            Séance
           </p>
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {formatSessionLabel(booking.session)}
@@ -120,7 +132,7 @@ export default async function GuichetBookingDetailsPage({ params }) {
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Date de creation
+            Date de création
           </p>
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {formatDateTime(booking.createdAt)}
@@ -133,37 +145,49 @@ export default async function GuichetBookingDetailsPage({ params }) {
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">
             Tickets
           </h2>
-          <span className="text-sm font-semibold text-slate-900">
-            {tickets.length}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-slate-900">
+              {tickets.length}
+            </span>
+            {canCancelEntireSale ?
+            <GuichetBookingCancelAction
+              bookingId={booking.id}
+              ticketIds={cancellableTickets.map((ticket) => ticket.id)}
+              label="Annuler toute la vente"
+              description="Cette action annule tous les billets non scannés de cette vente."
+              className="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60" /> :
+
+            null}
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4 text-left font-semibold">Code</th>
-                <th className="px-6 py-4 text-left font-semibold">Siege</th>
+                <th className="px-6 py-4 text-left font-semibold">Siège</th>
                 <th className="px-6 py-4 text-left font-semibold">Tarif</th>
                 <th className="px-6 py-4 text-left font-semibold">Prix</th>
                 <th className="px-6 py-4 text-left font-semibold">Statut</th>
                 <th className="px-6 py-4 text-left font-semibold">
                   Date ticket
                 </th>
+                <th className="px-6 py-4 text-left font-semibold">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-slate-600">
-              {tickets.length === 0 ? (
-                <tr>
-                  <td className="px-6 py-8" colSpan={6}>
+              {tickets.length === 0 ?
+              <tr>
+                  <td className="px-6 py-8" colSpan={7}>
                     Aucun ticket pour ce booking.
                   </td>
-                </tr>
-              ) : (
-                tickets.map((ticket) => {
-                  const statusMeta = getTicketStatusMeta(ticket.isScanned);
+                </tr> :
 
-                  return (
-                    <tr key={ticket.id || ticket.code} className="hover:bg-slate-50">
+              tickets.map((ticket) => {
+                const statusMeta = getTicketStatusMeta(ticket);
+
+                return (
+                  <tr key={ticket.id || ticket.code} className="hover:bg-slate-50">
                       <td className="px-6 py-4 font-semibold text-slate-900">
                         {ticket.code || "-"}
                       </td>
@@ -178,27 +202,44 @@ export default async function GuichetBookingDetailsPage({ params }) {
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${statusMeta.tone}`}
-                        >
+                        className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${statusMeta.tone}`}>
+
                           {statusMeta.label}
                         </span>
-                        {ticket.scannedAt ? (
-                          <div className="mt-1 text-xs text-slate-500">
+                        {ticket.scannedAt ?
+                      <div className="mt-1 text-xs text-slate-500">
                             Scanne le {formatDateTime(ticket.scannedAt)}
-                          </div>
-                        ) : null}
+                          </div> :
+                      ticket.cancelledAt ?
+                      <div className="mt-1 text-xs text-slate-500">
+                            Annule le {formatDateTime(ticket.cancelledAt)}
+                          </div> :
+                      null}
                       </td>
                       <td className="px-6 py-4">
                         {formatDateTime(ticket.createdAt)}
                       </td>
-                    </tr>
-                  );
-                })
-              )}
+                      <td className="px-6 py-4">
+                        {statusMeta.code === "not_scanned" ?
+                      <GuichetBookingCancelAction
+                        bookingId={booking.id}
+                        ticketIds={[ticket.id]}
+                        label="Annuler"
+                        description={`Cette action annule le billet ${ticket.code || ""} (${formatSeatLabel(ticket.seat)}).`}
+                        className="inline-flex items-center justify-center rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60" /> :
+
+
+                      <span className="text-slate-300">-</span>
+                      }
+                      </td>
+                    </tr>);
+
+              })
+              }
             </tbody>
           </table>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }

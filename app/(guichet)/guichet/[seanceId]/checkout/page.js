@@ -6,8 +6,8 @@ import { Icon } from "@/components/ui/icons";
 import { getGuichetReservationDetails } from "@/services/guichet-reservation-details";
 import {
   resolvePricingItems,
-  resolveSeanceInfo,
-} from "@/lib/guichet/seance-utils";
+  resolveSeanceInfo } from
+"@/lib/guichet/seance-utils";
 
 const FALLBACK_POSTER = "/images/logo.png";
 
@@ -31,27 +31,27 @@ export default async function CheckoutPage({ params }) {
   const poster = seance.poster || FALLBACK_POSTER;
   const roomLabel = sessionData?.room?.name || seance.room || "Salle";
   const pricingOverrides = [
-    ...(Array.isArray(data?.pricingOverrides) ? data.pricingOverrides : []),
-    ...(Array.isArray(sessionData?.pricingOverrides)
-      ? sessionData.pricingOverrides
-      : []),
-    ...(Array.isArray(sessionData?.room?.pricingOverrides)
-      ? sessionData.room.pricingOverrides
-      : []),
-    ...(Array.isArray(data?.room?.pricingOverrides)
-      ? data.room.pricingOverrides
-      : []),
-  ];
+  ...(Array.isArray(data?.pricingOverrides) ? data.pricingOverrides : []),
+  ...(Array.isArray(sessionData?.pricingOverrides) ?
+  sessionData.pricingOverrides :
+  []),
+  ...(Array.isArray(sessionData?.room?.pricingOverrides) ?
+  sessionData.room.pricingOverrides :
+  []),
+  ...(Array.isArray(data?.room?.pricingOverrides) ?
+  data.room.pricingOverrides :
+  [])];
+
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10">
-      <div className="flex flex-col gap-3">
+    <div className="max-w-6xl mx-auto space-y-5">
+      <div className="flex items-center m- gap-3">
         <div>
           <Link
             href={`/guichet/${seanceId}`}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
-            aria-label="Retour à la séance"
-          >
+            aria-label="Retour à la séance">
+
             <Icon name="chevronLeft" className="h-4 w-4" />
           </Link>
         </div>
@@ -70,8 +70,8 @@ export default async function CheckoutPage({ params }) {
           seats={seats}
           pricingItems={pricingItems}
           pricingOverrides={pricingOverrides}
-          sessionId={seanceId}
-        />
+          sessionId={seanceId} />
+
 
         <aside className="lg:col-span-4">
           <div className="sticky top-24 flex flex-col gap-6 p-6 bg-white rounded-2xl border border-slate-100 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.3)]">
@@ -82,19 +82,19 @@ export default async function CheckoutPage({ params }) {
                 className="w-full h-full object-cover"
                 fill
                 sizes="(min-width: 1024px) 320px, 100vw"
-                src={poster}
-              />
+                src={poster} />
+
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <h2 className="text-2xl font-secondary text-slate-900 tracking-tight leading-none uppercase">
                   {seance.title || "Séance"}
                 </h2>
-                {seance.genre ? (
-                  <p className="text-primary text-sm font-semibold">
+                {seance.genre ?
+                <p className="text-primary text-sm font-semibold">
                     {seance.genre}
-                  </p>
-                ) : null}
+                  </p> :
+                null}
               </div>
               <hr className="border-slate-100" />
               <div className="flex flex-col gap-4 text-slate-600">
@@ -114,9 +114,9 @@ export default async function CheckoutPage({ params }) {
                   <Icon name="seat" className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium text-slate-900">
                     {roomLabel}
-                    {seatLabels.length
-                      ? `, sièges ${seatLabels.join(", ")}`
-                      : ""}
+                    {seatLabels.length ?
+                    `, sièges ${seatLabels.join(", ")}` :
+                    ""}
                   </span>
                 </div>
               </div>
@@ -124,6 +124,6 @@ export default async function CheckoutPage({ params }) {
           </div>
         </aside>
       </div>
-    </div>
-  );
+    </div>);
+
 }

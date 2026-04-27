@@ -1,9 +1,19 @@
+import DashboardAccessDenied from "@/components/dashboard/access-denied";
+import { canAccessDashboardPermission } from "@/services/dashboard-auth";
 import SeancesClient from "./seances-client";
 import { parseSessionsSearchParams } from "@/lib/seances/search-params";
 import { getSessions } from "@/services/sessions";
 import { getEvents, getSessionFormData } from "@/services/evenements";
 
 export default async function SeancesPage({ searchParams }) {
+  const canList = await canAccessDashboardPermission("sessions", "list");
+
+  if (!canList) {
+    return (
+      <DashboardAccessDenied message="Vous n'avez pas la permission de consulter les séances." />
+    );
+  }
+
   const resolvedParams = await searchParams;
   const { page, limit, status, from, to, orderBy } =
     parseSessionsSearchParams(resolvedParams);

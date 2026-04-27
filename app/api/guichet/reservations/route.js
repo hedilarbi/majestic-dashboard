@@ -10,7 +10,7 @@ export async function POST(request) {
 
   if (!auth.ok) {
     return NextResponse.json(
-      { message: auth.message || "Non authentifie." },
+      { message: auth.message || "Non authentifié." },
       { status: resolveAuthStatus(auth.message) },
     );
   }
@@ -37,7 +37,7 @@ export async function POST(request) {
     return NextResponse.json(data, { status: response.status });
   } catch {
     return NextResponse.json(
-      { message: "Impossible de reserver les sieges." },
+      { message: "Impossible de réserver les sièges." },
       { status: 502 },
     );
   }

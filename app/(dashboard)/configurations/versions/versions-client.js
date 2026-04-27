@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icons";
 import Modal from "@/components/ui/modal";
 import Toast from "@/components/ui/toast";
+import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions";
 import { useToast } from "@/hooks/use-toast";
 import {
   createVersion,
@@ -18,6 +19,7 @@ export default function VersionsClient({
   initialError = "",
 }) {
   const router = useRouter();
+  const permissions = useDashboardModulePermissions("versions");
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -165,14 +167,16 @@ export default function VersionsClient({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
-            >
-              <Icon name="plus" className="h-5 w-5" />
-              Ajouter une version
-            </button>
+            {permissions.canCreate ? (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+              >
+                <Icon name="plus" className="h-5 w-5" />
+                Ajouter une version
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -218,22 +222,26 @@ export default function VersionsClient({
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-3">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(item)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
-                            aria-label="Modifier"
-                          >
-                            <Icon name="pen" className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPendingDelete(item)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
-                            aria-label="Supprimer"
-                          >
-                            <Icon name="trash" className="h-4 w-4" />
-                          </button>
+                          {permissions.canUpdate ? (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(item)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
+                              aria-label="Modifier"
+                            >
+                              <Icon name="pen" className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                          {permissions.canDelete ? (
+                            <button
+                              type="button"
+                              onClick={() => setPendingDelete(item)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
+                              aria-label="Supprimer"
+                            >
+                              <Icon name="trash" className="h-4 w-4" />
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -244,7 +252,7 @@ export default function VersionsClient({
           )}
         </div>
 
-        {isCreateOpen ? (
+        {isCreateOpen && permissions.canCreate ? (
           <Modal
             title="Ajouter une version"
             description="Renseigne le nom (ex: VO, VOSTFR, VF)."
@@ -293,7 +301,7 @@ export default function VersionsClient({
           </Modal>
         ) : null}
 
-        {isEditOpen ? (
+        {isEditOpen && permissions.canUpdate ? (
           <Modal
             title="Modifier la version"
             description="Mets à jour le nom de la version."
@@ -342,7 +350,7 @@ export default function VersionsClient({
           </Modal>
         ) : null}
 
-        {pendingDelete ? (
+        {pendingDelete && permissions.canDelete ? (
           <Modal
             title="Supprimer la version"
             description={`Confirmer la suppression de "${pendingDelete.name}" ?`}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Icon } from "@/components/ui/icons";
 import EventFormModal from "@/components/evenements/event-form-modal";
+import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions";
 import { updateEvent } from "@/services/evenements-actions";
 import {
   GENRE_OPTIONS,
@@ -40,6 +41,7 @@ export default function EventEditTrigger({
   showTypesError = "",
 }) {
   const router = useRouter();
+  const permissions = useDashboardModulePermissions("events");
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formState, setFormState] = useState(() =>
@@ -192,16 +194,18 @@ export default function EventEditTrigger({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openModal}
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-      >
-        <Icon name="pen" className="h-4 w-4" />
-        Modifier l&apos;événement
-      </button>
+      {permissions.canUpdate ? (
+        <button
+          type="button"
+          onClick={openModal}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+        >
+          <Icon name="pen" className="h-4 w-4" />
+          Modifier l&apos;événement
+        </button>
+      ) : null}
 
-      {isOpen ? (
+      {isOpen && permissions.canUpdate ? (
         <EventFormModal
           title="Modifier l'événement"
           description="Mettez à jour les informations de l'événement."

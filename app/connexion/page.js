@@ -50,8 +50,23 @@ export default function ConnexionPage() {
         return;
       }
 
-      if (data?.user?.role !== "admin") {
-        setErrorMessage("Acces refuse.");
+      if (data?.user?.role === "cashier") {
+        router.replace("/caissier");
+        return;
+      }
+
+      if (data?.user?.role === "blog_manager") {
+        router.replace("/blogue");
+        return;
+      }
+
+      if (
+        data?.user?.role !== "admin" &&
+        data?.user?.role !== "super_admin" &&
+        data?.user?.role !== "blog_manager" &&
+        data?.user?.role !== "cashier"
+      ) {
+        setErrorMessage("Accès refuse.");
         return;
       }
 

@@ -15,7 +15,12 @@ import {
 } from "@/lib/evenements/helpers";
 import { updateEventStatus } from "@/services/evenements-actions";
 
-export default function EventTable({ events, onDelete }) {
+export default function EventTable({
+  events,
+  onDelete,
+  canUpdate = false,
+  canDelete = false,
+}) {
   const router = useRouter();
   const [updatingId, setUpdatingId] = useState("");
 
@@ -142,13 +147,13 @@ export default function EventTable({ events, onDelete }) {
                         role="switch"
                         aria-checked={eventItem.status === "active"}
                         onClick={() => handleToggleStatus(eventItem)}
-                        disabled={updatingId === eventItem.id}
+                        disabled={!canUpdate || updatingId === eventItem.id}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                           eventItem.status === "active"
                             ? "bg-emerald-500"
                             : "bg-slate-300"
                         } ${
-                          updatingId === eventItem.id
+                          !canUpdate || updatingId === eventItem.id
                             ? "cursor-not-allowed opacity-70"
                             : "hover:opacity-90"
                         }`}
@@ -172,14 +177,16 @@ export default function EventTable({ events, onDelete }) {
                         >
                           <Icon name="eye" className="h-4 w-4" />
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => onDelete(eventItem)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
-                          aria-label="Supprimer l'événement"
-                        >
-                          <Icon name="trash" className="h-4 w-4" />
-                        </button>
+                        {canDelete ? (
+                          <button
+                            type="button"
+                            onClick={() => onDelete(eventItem)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
+                            aria-label="Supprimer l'événement"
+                          >
+                            <Icon name="trash" className="h-4 w-4" />
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

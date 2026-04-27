@@ -13,21 +13,21 @@ import { useToast } from "@/hooks/use-toast";
 
 import {
   resolvePricingItems,
-  resolveSeanceInfo,
-} from "@/lib/guichet/seance-utils";
+  resolveSeanceInfo } from
+"@/lib/guichet/seance-utils";
 import {
   buildSeatRows,
   normalizeSeatsPayload,
-  seatKey,
-} from "@/lib/guichet/seat-utils";
+  seatKey } from
+"@/lib/guichet/seat-utils";
 import { getExpiresAtMs } from "@/lib/guichet/time-utils";
 import { resolveSocketUrl } from "@/lib/guichet/api-client";
 import { normalizeReservationResponse } from "@/lib/guichet/reservation-utils";
 import { fetchSeatMap } from "@/services/guichet-seatmap-client";
 import {
   cancelReservation,
-  reserveSeats,
-} from "@/services/guichet-reservations-client";
+  reserveSeats } from
+"@/services/guichet-reservations-client";
 
 const mergeSeatData = (primary, fallback) => {
   if (!primary) {
@@ -41,7 +41,7 @@ const mergeSeatData = (primary, fallback) => {
     ...fallback,
     ...primary,
     pricingOverride: primary.pricingOverride ?? fallback.pricingOverride,
-    pricingOverrideId: primary.pricingOverrideId ?? fallback.pricingOverrideId,
+    pricingOverrideId: primary.pricingOverrideId ?? fallback.pricingOverrideId
   };
 };
 
@@ -62,6 +62,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
   const [timeLeftMs, setTimeLeftMs] = useState(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [pendingSeatActionsCount, setPendingSeatActionsCount] = useState(0);
   const indexRef = useRef(new Map());
   const pricingOverrideRef = useRef(new Map());
   const pendingSeatActionsRef = useRef(new Map());
@@ -71,13 +72,13 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
   const seatRowsRef = useRef([]);
 
   const mergeSelectedSeats = useCallback((reservationSeats = []) => {
-    const safeReservationSeats = Array.isArray(reservationSeats)
-      ? reservationSeats.filter(
-          (seat) => seat && seat.row !== undefined && seat.col !== undefined,
-        )
-      : [];
+    const safeReservationSeats = Array.isArray(reservationSeats) ?
+    reservationSeats.filter(
+      (seat) => seat && seat.row !== undefined && seat.col !== undefined
+    ) :
+    [];
     const reservationKeys = new Set(
-      safeReservationSeats.map((seat) => seatKey(seat.row, seat.col)),
+      safeReservationSeats.map((seat) => seatKey(seat.row, seat.col))
     );
     const pendingReservedSeats = selectedSeatsRef.current.filter((seat) => {
       if (!seat || seat.row === undefined || seat.col === undefined) {
@@ -88,32 +89,32 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       return pending?.action === "reserve" && !reservationKeys.has(key);
     });
     const pendingReserveKeys = new Set(
-      pendingReservedSeats.map((seat) => seatKey(seat.row, seat.col)),
+      pendingReservedSeats.map((seat) => seatKey(seat.row, seat.col))
     );
     const pendingReleaseKeys = new Set(
-      Array.from(pendingSeatActionsRef.current.entries())
-        .filter(([, value]) => value?.action === "release")
-        .map(([key]) => key),
+      Array.from(pendingSeatActionsRef.current.entries()).
+      filter(([, value]) => value?.action === "release").
+      map(([key]) => key)
     );
     const preserveExisting = pendingSeatActionsRef.current.size > 0;
-    const stableSelectedSeats = preserveExisting
-      ? selectedSeatsRef.current.filter((seat) => {
-          if (!seat || seat.row === undefined || seat.col === undefined) {
-            return false;
-          }
-          const key = seatKey(seat.row, seat.col);
-          if (reservationKeys.has(key)) {
-            return false;
-          }
-          if (pendingReserveKeys.has(key)) {
-            return false;
-          }
-          if (pendingReleaseKeys.has(key)) {
-            return false;
-          }
-          return true;
-        })
-      : [];
+    const stableSelectedSeats = preserveExisting ?
+    selectedSeatsRef.current.filter((seat) => {
+      if (!seat || seat.row === undefined || seat.col === undefined) {
+        return false;
+      }
+      const key = seatKey(seat.row, seat.col);
+      if (reservationKeys.has(key)) {
+        return false;
+      }
+      if (pendingReserveKeys.has(key)) {
+        return false;
+      }
+      if (pendingReleaseKeys.has(key)) {
+        return false;
+      }
+      return true;
+    }) :
+    [];
 
     const merged = new Map();
     const mergeList = (list = []) => {
@@ -140,10 +141,10 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       setSelectedSeats(merged);
       selectedSeatsRef.current = merged;
       selectedSeatKeysRef.current = new Set(
-        merged.map((seat) => seatKey(seat.row, seat.col)),
+        merged.map((seat) => seatKey(seat.row, seat.col))
       );
     },
-    [mergeSelectedSeats],
+    [mergeSelectedSeats]
   );
 
   const removeSelectedSeats = useCallback((seatsToRemove = []) => {
@@ -152,9 +153,9 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
     }
 
     const keysToRemove = new Set(
-      seatsToRemove
-        .filter((seat) => seat && seat.row !== undefined && seat.col !== undefined)
-        .map((seat) => seatKey(seat.row, seat.col)),
+      seatsToRemove.
+      filter((seat) => seat && seat.row !== undefined && seat.col !== undefined).
+      map((seat) => seatKey(seat.row, seat.col))
     );
 
     if (!keysToRemove.size) {
@@ -162,12 +163,12 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
     }
 
     const nextSelected = selectedSeatsRef.current.filter(
-      (seat) => !keysToRemove.has(seatKey(seat.row, seat.col)),
+      (seat) => !keysToRemove.has(seatKey(seat.row, seat.col))
     );
 
     selectedSeatsRef.current = nextSelected;
     selectedSeatKeysRef.current = new Set(
-      nextSelected.map((seat) => seatKey(seat.row, seat.col)),
+      nextSelected.map((seat) => seatKey(seat.row, seat.col))
     );
     setSelectedSeats(nextSelected);
 
@@ -177,7 +178,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       }
       const nextReservation = {
         ...prev,
-        seats: nextSelected,
+        seats: nextSelected
       };
       return nextReservation;
     });
@@ -197,33 +198,33 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
     }
 
     const nestedPricing =
-      raw.pricingId && typeof raw.pricingId === "object"
-        ? raw.pricingId
-        : null;
+    raw.pricingId && typeof raw.pricingId === "object" ?
+    raw.pricingId :
+    null;
     const source = nestedPricing || raw;
     const id =
-      source?._id ??
-      source?.id ??
-      raw?.pricingId ??
-      raw?.pricingOverrideId ??
-      raw?.pricingOverride ??
-      raw?.id ??
-      "";
+    source?._id ??
+    source?.id ??
+    raw?.pricingId ??
+    raw?.pricingOverrideId ??
+    raw?.pricingOverride ??
+    raw?.id ??
+    "";
     const name =
-      source?.name ??
-      source?.nom ??
-      raw?.label ??
-      raw?.name ??
-      raw?.nom ??
-      "";
+    source?.name ??
+    source?.nom ??
+    raw?.label ??
+    raw?.name ??
+    raw?.nom ??
+    "";
     const price =
-      source?.price ??
-      source?.prix ??
-      raw?.price ??
-      raw?.prix ??
-      raw?.amount ??
-      raw?.montant ??
-      null;
+    source?.price ??
+    source?.prix ??
+    raw?.price ??
+    raw?.prix ??
+    raw?.amount ??
+    raw?.montant ??
+    null;
 
     if (!id && !name && price === null) {
       return null;
@@ -232,28 +233,28 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
     return {
       id: id ? String(id) : name ? String(name) : "",
       name,
-      price,
+      price
     };
   }, []);
 
   const resolveSeatOverride = useCallback(
     (seat, fallbackOverride = null) => {
       const seatOverride =
-        normalizeOverrideMeta(seat?.pricingOverride) ||
-        normalizeOverrideMeta(seat?.pricingOverrideId);
-      const mapOverride = fallbackOverride
-        ? normalizeOverrideMeta(fallbackOverride)
-        : null;
+      normalizeOverrideMeta(seat?.pricingOverride) ||
+      normalizeOverrideMeta(seat?.pricingOverrideId);
+      const mapOverride = fallbackOverride ?
+      normalizeOverrideMeta(fallbackOverride) :
+      null;
 
       const mergedId =
-        seatOverride?.id ||
-        mapOverride?.id ||
-        (typeof seat?.pricingOverrideId === "string"
-          ? seat.pricingOverrideId
-          : "");
+      seatOverride?.id ||
+      mapOverride?.id || (
+      typeof seat?.pricingOverrideId === "string" ?
+      seat.pricingOverrideId :
+      "");
       const mergedName = seatOverride?.name || mapOverride?.name || "";
       const mergedPrice =
-        seatOverride?.price ?? mapOverride?.price ?? null;
+      seatOverride?.price ?? mapOverride?.price ?? null;
 
       if (!mergedId && !mergedName && mergedPrice === null) {
         return null;
@@ -262,10 +263,10 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       return {
         id: mergedId || mergedName,
         name: mergedName,
-        price: mergedPrice,
+        price: mergedPrice
       };
     },
-    [normalizeOverrideMeta],
+    [normalizeOverrideMeta]
   );
 
   const isPendingReserve = useCallback((key) => {
@@ -279,7 +280,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
   useEffect(() => {
     selectedSeatsRef.current = selectedSeats;
     selectedSeatKeysRef.current = new Set(
-      selectedSeats.map((seat) => seatKey(seat.row, seat.col)),
+      selectedSeats.map((seat) => seatKey(seat.row, seat.col))
     );
   }, [selectedSeats]);
 
@@ -289,7 +290,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
 
   const selectedSeatKeys = useMemo(
     () => new Set(selectedSeats.map((seat) => seatKey(seat.row, seat.col))),
-    [selectedSeats],
+    [selectedSeats]
   );
 
   const reservationSeatKeys = useMemo(() => {
@@ -298,7 +299,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
     }
 
     return new Set(
-      myReservation.seats.map((seat) => seatKey(seat.row, seat.col)),
+      myReservation.seats.map((seat) => seatKey(seat.row, seat.col))
     );
   }, [myReservation]);
 
@@ -317,9 +318,9 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
           id: incoming.id || existing.id,
           name: incoming.name || existing.name,
           price:
-            incoming.price !== null && incoming.price !== undefined
-              ? incoming.price
-              : existing.price ?? null,
+          incoming.price !== null && incoming.price !== undefined ?
+          incoming.price :
+          existing.price ?? null
         };
       };
 
@@ -342,25 +343,25 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
         overrideMap.set(key, mergeOverrideMeta(existing, meta));
       };
 
-      const overridesList = Array.isArray(pricingOverrides)
-        ? pricingOverrides
-        : [];
+      const overridesList = Array.isArray(pricingOverrides) ?
+      pricingOverrides :
+      [];
 
       overridesList.forEach((override) => {
         if (!override) {
           return;
         }
         const rowValue =
-          override?.row ?? override?.rowValue ?? override?.seatRow;
+        override?.row ?? override?.rowValue ?? override?.seatRow;
         const colValue =
-          override?.col ?? override?.seatCol ?? override?.column;
+        override?.col ?? override?.seatCol ?? override?.column;
         const rawOverride =
-          override?.pricingId ??
-          override?.pricing ??
-          override?.tarif ??
-          override?.pricingOverride ??
-          override?.pricingOverrideId ??
-          override;
+        override?.pricingId ??
+        override?.pricing ??
+        override?.tarif ??
+        override?.pricingOverride ??
+        override?.pricingOverrideId ??
+        override;
         addOverride(rowValue, colValue, rawOverride);
       });
 
@@ -369,9 +370,9 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
           return;
         }
         const rawOverride =
-          cell.pricingOverrideId !== undefined
-            ? cell.pricingOverrideId
-            : cell.pricingOverride;
+        cell.pricingOverrideId !== undefined ?
+        cell.pricingOverrideId :
+        cell.pricingOverride;
         addOverride(cell.row, cell.col, rawOverride);
       });
 
@@ -388,16 +389,16 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
           ...cell,
           pricingOverride: overrideMeta,
           pricingOverrideId:
-            overrideMeta.id ??
-            cell.pricingOverrideId ??
-            cell.pricingOverride,
+          overrideMeta.id ??
+          cell.pricingOverrideId ??
+          cell.pricingOverride
         };
       });
 
       const {
         rows,
         maxCols: computedMaxCols,
-        indexByKey,
+        indexByKey
       } = buildSeatRows(normalizedSeatMap);
       indexRef.current = indexByKey;
       setSeatRows(rows);
@@ -405,7 +406,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
 
       pricingOverrideRef.current = overrideMap;
     },
-    [normalizeOverrideMeta],
+    [normalizeOverrideMeta]
   );
 
   const applyPricingOverrides = useCallback((seats = []) => {
@@ -429,7 +430,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       return {
         ...seat,
         pricingOverrideId: overrideId,
-        pricingOverride: overrideMeta,
+        pricingOverride: overrideMeta
       };
     });
   }, [resolveSeatOverride]);
@@ -441,11 +442,11 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
 
     const { keepSelected = false } = options;
     const seatKeys = new Set(
-      seats
-        .filter(
-          (seat) => seat && seat.row !== undefined && seat.col !== undefined,
-        )
-        .map((seat) => seatKey(seat.row, seat.col)),
+      seats.
+      filter(
+        (seat) => seat && seat.row !== undefined && seat.col !== undefined
+      ).
+      map((seat) => seatKey(seat.row, seat.col))
     );
 
     setSeatRows((prevRows) => {
@@ -490,17 +491,17 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
 
     if (status !== "available" && !keepSelected) {
       setSelectedSeats((prev) =>
-        prev.filter((seat) => {
-          const key = seatKey(seat.row, seat.col);
-          if (!seatKeys.has(key)) {
-            return true;
-          }
-          const pending = pendingSeatActionsRef.current.get(key);
-          if (pending?.action) {
-            return true;
-          }
-          return selectedSeatKeysRef.current.has(key);
-        }),
+      prev.filter((seat) => {
+        const key = seatKey(seat.row, seat.col);
+        if (!seatKeys.has(key)) {
+          return true;
+        }
+        const pending = pendingSeatActionsRef.current.get(key);
+        if (pending?.action) {
+          return true;
+        }
+        return selectedSeatKeysRef.current.has(key);
+      })
       );
     }
   }, []);
@@ -518,13 +519,29 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       setLoadError("");
 
       try {
-        const { ok, data } = await fetchSeatMap(seanceId, {
-          signal: controller.signal,
+        const { ok, status, data } = await fetchSeatMap(seanceId, {
+          signal: controller.signal
         });
         console.log("[guichet/seance] seatMap response", { seanceId, ok, data });
 
         if (!ok) {
-          throw new Error("Impossible de charger la salle.");
+          if (status === 409) {
+            const serverStatus = String(
+              data?.sessionStatus || data?.session?.status || "completed"
+            ).
+            trim().
+            toLowerCase();
+            setSeance((prev) => ({
+              ...prev,
+              sessionStatus: serverStatus || "completed"
+            }));
+            setLoadError("");
+            return;
+          }
+
+          throw new Error(
+            data?.message || "Impossible de charger le plan de salle."
+          );
         }
 
         if (!active) {
@@ -533,33 +550,33 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
 
         const seatMap = Array.isArray(data?.seatMap) ? data.seatMap : [];
         const pricingOverrides =
-          (Array.isArray(data?.pricingOverrides) && data.pricingOverrides) ||
-          (Array.isArray(data?.session?.pricingOverrides) &&
-            data.session.pricingOverrides) ||
-          (Array.isArray(data?.seance?.pricingOverrides) &&
-            data.seance.pricingOverrides) ||
-          (Array.isArray(data?.room?.pricingOverrides) &&
-            data.room.pricingOverrides) ||
-          [];
+        Array.isArray(data?.pricingOverrides) && data.pricingOverrides ||
+        Array.isArray(data?.session?.pricingOverrides) &&
+        data.session.pricingOverrides ||
+        Array.isArray(data?.seance?.pricingOverrides) &&
+        data.seance.pricingOverrides ||
+        Array.isArray(data?.room?.pricingOverrides) &&
+        data.room.pricingOverrides ||
+        [];
         updateSeatMap(seatMap, pricingOverrides);
         setSeance(resolveSeanceInfo(data));
         const resolvedPricing = resolvePricingItems(data);
         setPricingItems(resolvedPricing);
 
         const reservation = normalizeReservationResponse({
-          reservation: data?.myReservation,
+          reservation: data?.myReservation
         });
         if (reservation.reservationId && reservation.seats.length > 0) {
           const seatsWithOverrides = applyPricingOverrides(reservation.seats);
-          console.log("[guichet/seance] initial reservation", {
+          console.log("[guichet/seance] initial réservation", {
             seanceId,
             reservationId: reservation.reservationId,
-            seats: seatsWithOverrides,
+            seats: seatsWithOverrides
           });
           setMyReservation({
             reservationId: reservation.reservationId,
             expiresAt: reservation.expiresAt,
-            seats: seatsWithOverrides,
+            seats: seatsWithOverrides
           });
           syncSelectedSeats(seatsWithOverrides);
           setReservationExpired(false);
@@ -572,7 +589,9 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
         if (!active || error.name === "AbortError") {
           return;
         }
-        setLoadError("Impossible de charger le plan de salle.");
+        setLoadError(
+          error?.message || "Impossible de charger le plan de salle."
+        );
       } finally {
         if (active) {
           setIsLoading(false);
@@ -584,6 +603,8 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
     setMyReservation(null);
     setReservationExpired(false);
     setPricingItems([]);
+    pendingSeatActionsRef.current.clear();
+    setPendingSeatActionsCount(0);
     loadSeatMap();
 
     return () => {
@@ -594,14 +615,16 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
 
   useEffect(() => {
     const socketUrl = resolveSocketUrl(socketUrlProp);
-    if (!socketUrl || !seanceId) {
+    const isSessionUnavailable =
+    Boolean(seance?.sessionStatus) && seance.sessionStatus !== "in_progress";
+    if (!socketUrl || !seanceId || isSessionUnavailable) {
       return undefined;
     }
 
     const socket = io(socketUrl, {
       transports: ["polling", "websocket"],
       reconnection: true,
-      timeout: 10000,
+      timeout: 10000
     });
 
     socket.emit("join-session", { sessionId: seanceId });
@@ -618,16 +641,16 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
         }
 
         const seatsWithOverrides = applyPricingOverrides(reservation.seats);
-        console.log("[guichet/seance] socket reservation", {
+        console.log("[guichet/seance] socket réservation", {
           seanceId,
           reservationId: reservation.reservationId,
-          seats: seatsWithOverrides,
+          seats: seatsWithOverrides
         });
         setReservationExpired(false);
         setMyReservation({
           reservationId: reservation.reservationId,
           expiresAt: reservation.expiresAt,
-          seats: seatsWithOverrides,
+          seats: seatsWithOverrides
         });
         syncSelectedSeats(seatsWithOverrides);
         return;
@@ -666,7 +689,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       setMyReservation({
         reservationId: reservation.reservationId,
         expiresAt: reservation.expiresAt,
-        seats: seatsWithOverrides,
+        seats: seatsWithOverrides
       });
       syncSelectedSeats(seatsWithOverrides);
     };
@@ -710,7 +733,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
         setMyReservation({
           reservationId: reservation.reservationId,
           expiresAt: reservation.expiresAt,
-          seats: seatsWithOverrides,
+          seats: seatsWithOverrides
         });
         syncSelectedSeats(seatsWithOverrides);
         return;
@@ -719,9 +742,9 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       if (payloadSeats.length) {
         removeSelectedSeats(payloadSeats);
         if (
-          selectedSeatsRef.current.length === 0 &&
-          pendingSeatActionsRef.current.size === 0
-        ) {
+        selectedSeatsRef.current.length === 0 &&
+        pendingSeatActionsRef.current.size === 0)
+        {
           setMyReservation(null);
           setReservationExpired(false);
           setTimeLeftMs(null);
@@ -761,16 +784,17 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       socket.disconnect();
     };
   }, [
-    applyPricingOverrides,
-    isPendingReserve,
-    isSeatPending,
-    removeSelectedSeats,
-    seanceId,
-    socketUrlProp,
-    updateSeatStatuses,
-    syncSelectedSeats,
-    userId,
-  ]);
+  applyPricingOverrides,
+  isPendingReserve,
+  isSeatPending,
+  removeSelectedSeats,
+  seance?.sessionStatus,
+  seanceId,
+  socketUrlProp,
+  updateSeatStatuses,
+  syncSelectedSeats,
+  userId]
+  );
 
   useEffect(() => {
     const expiresAtMs = getExpiresAtMs(myReservation?.expiresAt);
@@ -794,6 +818,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
           updateSeatStatuses(expiredSeats, "available");
         }
         pendingSeatActionsRef.current.clear();
+        setPendingSeatActionsCount(0);
         selectedSeatsRef.current = [];
         selectedSeatKeysRef.current = new Set();
         setTimeLeftMs(0);
@@ -826,14 +851,14 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
       const override = pricingOverrideRef.current.get(key);
       const overrideMeta = resolveSeatOverride(null, override);
       const overrideId = overrideMeta?.id;
-      const toggledSeat = overrideId
-        ? {
-            row: seat.row,
-            col: seat.col,
-            pricingOverrideId: overrideId,
-            pricingOverride: overrideMeta,
-          }
-        : { row: seat.row, col: seat.col };
+      const toggledSeat = overrideId ?
+      {
+        row: seat.row,
+        col: seat.col,
+        pricingOverrideId: overrideId,
+        pricingOverride: overrideMeta
+      } :
+      { row: seat.row, col: seat.col };
       const action = exists ? "release" : "reserve";
 
       const pending = pendingSeatActionsRef.current.get(key);
@@ -848,31 +873,32 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
 
       const prevSelectedSeats = selectedSeatsRef.current;
       const position = indexRef.current.get(key);
-      const prevStatus = position
-        ? seatRowsRef.current?.[position.rowIndex]?.cells?.[position.colIndex]?.status
-        : undefined;
+      const prevStatus = position ?
+      seatRowsRef.current?.[position.rowIndex]?.cells?.[position.colIndex]?.status :
+      undefined;
       const fallbackStatus = exists ? "reserved" : "available";
-      const nextSelectedSeats = exists
-        ? prevSelectedSeats.filter(
-            (item) => seatKey(item.row, item.col) !== key,
-          )
-        : [...prevSelectedSeats, toggledSeat];
+      const nextSelectedSeats = exists ?
+      prevSelectedSeats.filter(
+        (item) => seatKey(item.row, item.col) !== key
+      ) :
+      [...prevSelectedSeats, toggledSeat];
 
       const opId = nextSeatOpRef.current + 1;
       nextSeatOpRef.current = opId;
       pendingSeatActionsRef.current.set(key, {
         action,
-        opId,
+        opId
       });
+      setPendingSeatActionsCount(pendingSeatActionsRef.current.size);
 
       selectedSeatsRef.current = nextSelectedSeats;
       selectedSeatKeysRef.current = new Set(
-        nextSelectedSeats.map((item) => seatKey(item.row, item.col)),
+        nextSelectedSeats.map((item) => seatKey(item.row, item.col))
       );
 
       setSelectedSeats(nextSelectedSeats);
       updateSeatStatuses([toggledSeat], exists ? "available" : "reserved", {
-        keepSelected: true,
+        keepSelected: true
       });
 
       let errorMessage = "";
@@ -882,12 +908,12 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
         const { ok, status, data } = await reserveSeats({
           sessionId: seanceId,
           seats: [toggledSeat],
-          action,
+          action
         });
 
         if (status === 409) {
           errorMessage =
-            "Certains sièges viennent d'être réservés. Veuillez réessayer.";
+          "Certains sièges viennent d'être réservés. Veuillez réessayer.";
           throw new Error("conflict");
         }
 
@@ -910,17 +936,17 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
           setTimeLeftMs(null);
         } else {
           if (action === "reserve" && toggledSeat.pricingOverrideId) {
-            console.log("[guichet/seance] reservation with fixed pricing seat", {
+            console.log("[guichet/seance] réservation with fixed pricing seat", {
               seanceId,
               reservationId: reservation.reservationId,
-              seats: seatsWithOverrides,
+              seats: seatsWithOverrides
             });
           }
           syncSelectedSeats(seatsWithOverrides);
           setMyReservation({
             reservationId: reservation.reservationId,
             expiresAt: reservation.expiresAt,
-            seats: seatsWithOverrides,
+            seats: seatsWithOverrides
           });
         }
 
@@ -930,31 +956,32 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
           return;
         }
         const message =
-          errorMessage || "Une erreur est survenue. Merci de réessayer.";
+        errorMessage || "Une erreur est survenue. Merci de réessayer.";
         showToast(message, "error");
         setSelectedSeats(prevSelectedSeats);
         selectedSeatsRef.current = prevSelectedSeats;
         selectedSeatKeysRef.current = new Set(
-          prevSelectedSeats.map((item) => seatKey(item.row, item.col)),
+          prevSelectedSeats.map((item) => seatKey(item.row, item.col))
         );
         updateSeatStatuses([toggledSeat], prevStatus ?? fallbackStatus, {
-          keepSelected: true,
+          keepSelected: true
         });
       } finally {
         if (pendingSeatActionsRef.current.get(key)?.opId === opId) {
           pendingSeatActionsRef.current.delete(key);
+          setPendingSeatActionsCount(pendingSeatActionsRef.current.size);
         }
       }
     },
     [
-      applyPricingOverrides,
-      resolveSeatOverride,
-      seanceId,
-      showToast,
-      syncSelectedSeats,
-      updateSeatStatuses,
-      userId,
-    ],
+    applyPricingOverrides,
+    resolveSeatOverride,
+    seanceId,
+    showToast,
+    syncSelectedSeats,
+    updateSeatStatuses,
+    userId]
+
   );
 
   const cancelCurrentReservation = useCallback(async () => {
@@ -1009,18 +1036,24 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
     setIsLeaving(false);
   }, [cancelCurrentReservation, isCancelling, isLeaving, router]);
 
-  const checkoutHref = myReservation?.reservationId
-    ? `/guichet/${seanceId}/checkout?reservationId=${myReservation.reservationId}`
-    : `/guichet/${seanceId}/checkout`;
+  const checkoutHref = myReservation?.reservationId ?
+  `/guichet/${seanceId}/checkout?reservationId=${myReservation.reservationId}` :
+  `/guichet/${seanceId}/checkout`;
 
-  const isActionDisabled = !myReservation;
+  const isActionPending = pendingSeatActionsCount > 0;
+  const isActionDisabled = !myReservation || isActionPending;
+  const isSessionUnavailable = Boolean(
+    !isLoading &&
+    seance?.sessionStatus &&
+    seance.sessionStatus !== "in_progress"
+  );
   const fixedPricingGroups = useMemo(() => {
     if (!selectedSeats.length) {
       return [];
     }
 
     const pricingById = new Map(
-      pricingItems.map((item) => [String(item.id), item]),
+      pricingItems.map((item) => [String(item.id), item])
     );
     const groups = new Map();
 
@@ -1035,7 +1068,7 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
         pricingId,
         label: overrideMeta.name || pricing?.name || "Tarif fixe",
         price: overrideMeta.price ?? pricing?.price,
-        seats: [],
+        seats: []
       };
 
       entry.seats.push(`${seat.row}${seat.col}`);
@@ -1045,6 +1078,26 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
     return Array.from(groups.values());
   }, [pricingItems, resolveSeatOverride, selectedSeats]);
 
+  if (isSessionUnavailable) {
+    return (
+      <div className="rounded-3xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm">
+        <h1 className="text-2xl font-secondary uppercase text-slate-900">
+          Cette séance n&apos;est pas disponible
+        </h1>
+        <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-500">
+          Le plan de salle est accessible uniquement pour les séances actives.
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push("/guichet/vente-de-billet")}
+          className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold tracking-widest text-white transition hover:brightness-110"
+        >
+          Retour aux séances
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
@@ -1053,23 +1106,23 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
           onClick={handleBackClick}
           disabled={isLeaving || isCancelling}
           className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition ${
-            isLeaving || isCancelling
-              ? "cursor-not-allowed opacity-70"
-              : "hover:bg-slate-50"
-          }`}
-          aria-label="Retour aux séances"
-        >
-          {isLeaving ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
-          ) : (
-            <Icon name="chevronLeft" className="h-4 w-4" />
-          )}
+          isLeaving || isCancelling ?
+          "cursor-not-allowed opacity-70" :
+          "hover:bg-slate-50"}`
+          }
+          aria-label="Retour aux séances">
+
+          {isLeaving ?
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" /> :
+
+          <Icon name="chevronLeft" className="h-4 w-4" />
+          }
         </button>
-        {isLeaving ? (
-          <span className="text-xs text-slate-500">
+        {isLeaving ?
+        <span className="text-xs text-slate-500">
             Annulation des réservations...
-          </span>
-        ) : null}
+          </span> :
+        null}
       </div>
       <div className="flex flex-col lg:flex-row gap-6">
         <SeatMapSection
@@ -1079,8 +1132,8 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
           reservationSeatKeys={reservationSeatKeys}
           onToggleSeat={handleToggleSeat}
           isLoading={isLoading}
-          loadError={loadError}
-        />
+          loadError={loadError} />
+
         <SeanceAside
           seance={seance}
           pricingItems={pricingItems}
@@ -1090,11 +1143,12 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
           timeLeftMs={timeLeftMs}
           isCancelling={isCancelling}
           checkoutHref={checkoutHref}
+          isActionPending={isActionPending}
           isActionDisabled={isActionDisabled}
-          onCancelReservation={handleCancelReservation}
-        />
+          onCancelReservation={handleCancelReservation} />
+
       </div>
       <Toast toast={toast} />
-    </div>
-  );
+    </div>);
+
 }

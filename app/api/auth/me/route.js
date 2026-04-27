@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
-const ALLOWED_ROLES = new Set(["admin", "ticket_office"]);
+const ALLOWED_ROLES = new Set([
+  "admin",
+  "super_admin",
+  "blog_manager",
+  "cashier",
+  "ticket_office",
+]);
 
 const clearAuthCookies = (response) => {
   const cookieOptions = {
@@ -20,7 +26,7 @@ export async function GET(request) {
 
   if (!token) {
     const response = NextResponse.json(
-      { message: "Non authentifie." },
+      { message: "Non authentifié." },
       { status: 401 }
     );
     clearAuthCookies(response);
@@ -58,7 +64,7 @@ export async function GET(request) {
 
   if (!ALLOWED_ROLES.has(data?.user?.role)) {
     const response = NextResponse.json(
-      { message: "Acces refuse." },
+      { message: "Accès refuse." },
       { status: 403 }
     );
     clearAuthCookies(response);

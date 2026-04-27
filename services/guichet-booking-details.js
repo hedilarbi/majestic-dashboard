@@ -13,7 +13,7 @@ export const getGuichetBookingDetails = async (bookingId) => {
       ok: false,
       status: resolveAuthStatus(auth.message),
       booking: null,
-      message: auth.message || "Non authentifie.",
+      message: auth.message || "Non authentifié.",
     };
   }
 

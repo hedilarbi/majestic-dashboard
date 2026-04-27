@@ -46,13 +46,54 @@ const normalizeCode = (value) => {
   return String(value).trim().toUpperCase();
 };
 
+const PROMO_CODE_PATTERN = /^[A-Z]{3}\d{3}$/;
+
 const isValidReductionType = (value) =>
   value === "amount" || value === "percent";
+
+const isValidAvailability = (value) =>
+  value === "public" || value === "private";
+
+const normalizeAvailability = (value) =>
+  value === "private" ? "private" : "public";
+
+export async function generatePromoCode() {
+  const auth = await getAuthContext();
+
+  if (!auth.ok) {
+    return { ok: false, code: "", message: auth.message || "Non authentifié." };
+  }
+
+  const response = await fetch(`${auth.baseUrl}/promo-codes/generate`, {
+    headers: {
+      Authorization: `Bearer ${auth.token}`,
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      code: "",
+      message: data?.message || "Generation impossible.",
+    };
+  }
+
+  return {
+    ok: true,
+    code: typeof data?.code === "string" ? data.code : "",
+    message: "",
+  };
+}
 
 export async function createPromoCode({
   code,
   reductionValue,
   reductionType,
+  availability,
   expiresAt,
   totalUsageLimit,
   userUsageLimit,
@@ -74,12 +115,23 @@ export async function createPromoCode({
     return { ok: false, message: "Le code est obligatoire." };
   }
 
+  if (!PROMO_CODE_PATTERN.test(normalizedCode)) {
+    return {
+      ok: false,
+      message: "Le code doit contenir 3 lettres majuscules suivies de 3 chiffres.",
+    };
+  }
+
   if (normalizedReductionValue === null) {
     return { ok: false, message: "La valeur de réduction est invalide." };
   }
 
   if (!isValidReductionType(reductionType)) {
     return { ok: false, message: "Le type de réduction est invalide." };
+  }
+
+  if (!isValidAvailability(normalizeAvailability(availability))) {
+    return { ok: false, message: "La disponibilité est invalide." };
   }
 
   if (!normalizedDate) {
@@ -98,6 +150,7 @@ export async function createPromoCode({
     code: normalizedCode,
     reductionValue: normalizedReductionValue,
     reductionType,
+    availability: normalizeAvailability(availability),
     expiresAt: normalizedDate,
     totalUsageLimit: normalizedTotalUsageLimit,
     userUsageLimit: normalizedUserUsageLimit,
@@ -132,6 +185,7 @@ export async function updatePromoCode({
   code,
   reductionValue,
   reductionType,
+  availability,
   expiresAt,
   totalUsageLimit,
   userUsageLimit,
@@ -157,12 +211,23 @@ export async function updatePromoCode({
     return { ok: false, message: "Le code est obligatoire." };
   }
 
+  if (!PROMO_CODE_PATTERN.test(normalizedCode)) {
+    return {
+      ok: false,
+      message: "Le code doit contenir 3 lettres majuscules suivies de 3 chiffres.",
+    };
+  }
+
   if (normalizedReductionValue === null) {
     return { ok: false, message: "La valeur de réduction est invalide." };
   }
 
   if (!isValidReductionType(reductionType)) {
     return { ok: false, message: "Le type de réduction est invalide." };
+  }
+
+  if (!isValidAvailability(normalizeAvailability(availability))) {
+    return { ok: false, message: "La disponibilité est invalide." };
   }
 
   if (!normalizedDate) {
@@ -181,6 +246,7 @@ export async function updatePromoCode({
     code: normalizedCode,
     reductionValue: normalizedReductionValue,
     reductionType,
+    availability: normalizeAvailability(availability),
     expiresAt: normalizedDate,
     totalUsageLimit: normalizedTotalUsageLimit,
     userUsageLimit: normalizedUserUsageLimit,

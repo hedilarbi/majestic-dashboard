@@ -15,8 +15,26 @@ export const useToast = (duration = 3000) => {
   }, []);
 
   const showToast = useCallback(
-    (message, type = "success") => {
-      setToast({ message, type });
+    (messageOrToast, type = "success") => {
+      const nextToast =
+        messageOrToast &&
+        typeof messageOrToast === "object" &&
+        !Array.isArray(messageOrToast)
+          ? {
+              message:
+                typeof messageOrToast.message === "string"
+                  ? messageOrToast.message
+                  : "",
+              type:
+                messageOrToast.type === "error" ? "error" : "success",
+            }
+          : {
+              message:
+                typeof messageOrToast === "string" ? messageOrToast : "",
+              type: type === "error" ? "error" : "success",
+            };
+
+      setToast(nextToast);
 
       if (timerRef.current) {
         clearTimeout(timerRef.current);

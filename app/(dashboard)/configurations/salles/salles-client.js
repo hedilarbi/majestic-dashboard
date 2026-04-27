@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icons";
 import Modal from "@/components/ui/modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import Toast from "@/components/ui/toast";
+import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/configurations/formatters";
 import {
@@ -72,6 +73,7 @@ export default function SallesClient({
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
+  const permissions = useDashboardModulePermissions("rooms");
   const [errorMessage, setErrorMessage] = useState(roomsError);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -347,14 +349,16 @@ export default function SallesClient({
             <p className="text-slate-500 mt-1">{TEXT.subtitle}</p>
           </div>
           {/* <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
-            >
-              <Icon name="plus" className="h-5 w-5" />
-              {TEXT.add}
-            </button>
+            {permissions.canCreate ? (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+              >
+                <Icon name="plus" className="h-5 w-5" />
+                {TEXT.add}
+              </button>
+            ) : null}
           </div> */}
         </div>
 
@@ -404,22 +408,26 @@ export default function SallesClient({
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-3">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(room)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
-                            aria-label="Modifier"
-                          >
-                            <Icon name="pen" className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPendingDelete(room)}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
-                            aria-label="Supprimer"
-                          >
-                            <Icon name="trash" className="h-4 w-4" />
-                          </button>
+                          {permissions.canUpdate ? (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(room)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
+                              aria-label="Modifier"
+                            >
+                              <Icon name="pen" className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                          {permissions.canDelete ? (
+                            <button
+                              type="button"
+                              onClick={() => setPendingDelete(room)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
+                              aria-label="Supprimer"
+                            >
+                              <Icon name="trash" className="h-4 w-4" />
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -430,7 +438,7 @@ export default function SallesClient({
           )}
         </div>
 
-        {isCreateOpen ? (
+        {isCreateOpen && permissions.canCreate ? (
           <Modal
             title={TEXT.createTitle}
             description="Créez une nouvelle salle et configurez son plan."
@@ -544,7 +552,7 @@ export default function SallesClient({
           </Modal>
         ) : null}
 
-        {isEditOpen ? (
+        {isEditOpen && permissions.canUpdate ? (
           <Modal
             title={TEXT.editTitle}
             description="Modifiez le plan de la salle et les options des sièges."
@@ -646,7 +654,7 @@ export default function SallesClient({
           </Modal>
         ) : null}
 
-        {pendingDelete ? (
+        {pendingDelete && permissions.canDelete ? (
           <ConfirmModal
             title={TEXT.deleteTitle}
             description={`${TEXT.deleteConfirm} ${pendingDelete.name} ?`}

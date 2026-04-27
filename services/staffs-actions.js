@@ -10,6 +10,7 @@ export async function createStaff({
   phone,
   role,
   password,
+  permissions,
 }) {
   const auth = await getAuthContext();
 
@@ -40,6 +41,7 @@ export async function createStaff({
     phone: phone || undefined,
     role,
     password: password || undefined,
+    permissions: Array.isArray(permissions) ? permissions : undefined,
   };
 
   const response = await fetch(`${auth.baseUrl}/staff/`, {
@@ -74,6 +76,7 @@ export async function updateStaff({
   phone,
   role,
   password,
+  permissions,
 }) {
   const auth = await getAuthContext();
 
@@ -104,6 +107,7 @@ export async function updateStaff({
     phone: phone || undefined,
     role,
     password: password || undefined,
+    permissions: Array.isArray(permissions) ? permissions : undefined,
   };
 
   const response = await fetch(

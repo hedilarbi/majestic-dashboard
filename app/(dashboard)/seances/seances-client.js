@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/icons";
 import SessionsTable from "@/components/evenements/sessions-table";
 import SessionFormModal from "@/components/evenements/session-form-modal";
+import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions";
 import SeancesFilters from "@/components/seances/seances-filters";
 import SeancesPagination from "@/components/seances/seances-pagination";
 
@@ -28,6 +29,7 @@ export default function SeancesClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const permissions = useDashboardModulePermissions("sessions");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const pagination = initialPagination || {
@@ -118,14 +120,16 @@ export default function SeancesClient({
             Planifiez et suivez les séances de votre programmation.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsCreateOpen(true)}
-          className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
-        >
-          <Icon name="plus" className="h-5 w-5" />
-          Créer une séance
-        </button>
+        {permissions.canCreate ? (
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+          >
+            <Icon name="plus" className="h-5 w-5" />
+            Créer une séance
+          </button>
+        ) : null}
       </div>
 
       {initialError ? (
@@ -170,7 +174,7 @@ export default function SeancesClient({
         hasPrev={pagination.hasPrev}
       />
 
-      {isCreateOpen ? (
+      {isCreateOpen && permissions.canCreate ? (
         <SessionFormModal
           mode="create"
           events={events}

@@ -3,11 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { useUser } from "@/components/dashboard/user-context";
+import AdminPermissionsMatrix from "@/components/staffs/admin-permissions-matrix";
 import { Icon } from "@/components/ui/icons";
 import Modal from "@/components/ui/modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import Toast from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
+import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions";
+import {
+  ALL_DASHBOARD_PERMISSIONS,
+  DASHBOARD_ROLE_LABELS,
+  buildPermissionsState,
+} from "@/lib/dashboard-permissions";
 import {
   createStaff,
   deleteStaff,
@@ -19,13 +27,19 @@ const INPUT_CLASSES =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30";
 
 const ROLE_OPTIONS = [
+  { value: "super_admin", label: "Super administrateur" },
   { value: "admin", label: "Administrateur" },
-  { value: "ticket_office", label: "Billetterie" },
+  { value: "blog_manager", label: "Gestion blogue" },
+  { value: "cashier", label: "Caissier" },
+  { value: "ticket_office", label: "Guichet" },
   { value: "door_staff", label: "Contrôle" },
 ];
 
 const ROLE_STYLES = {
+  super_admin: "bg-violet-100 text-violet-700",
   admin: "bg-indigo-100 text-indigo-700",
+  blog_manager: "bg-sky-100 text-sky-700",
+  cashier: "bg-emerald-100 text-emerald-700",
   ticket_office: "bg-amber-100 text-amber-700",
   door_staff: "bg-cyan-100 text-cyan-700",
   fallback: "bg-slate-100 text-slate-600",
@@ -36,6 +50,8 @@ const STATUS_LABELS = {
   suspended: "Suspendu",
 };
 
+const createPermissionsState = () => buildPermissionsState([]);
+
 const createEmptyForm = () => ({
   firstName: "",
   lastName: "",
@@ -44,14 +60,25 @@ const createEmptyForm = () => ({
   role: "ticket_office",
   password: "",
   confirmPassword: "",
+  permissionsState: createPermissionsState(),
 });
+
+const flattenPermissionsState = (permissionsState = {}) => {
+  return ALL_DASHBOARD_PERMISSIONS.filter((permission) => {
+    const [moduleKey, action] = permission.split(".");
+    return Boolean(permissionsState?.[moduleKey]?.[action]);
+  });
+};
 
 export default function StaffsClient({
   initialStaffs = [],
   initialError = "",
 }) {
   const router = useRouter();
+  const { user } = useUser();
   const { toast, showToast } = useToast();
+  const permissions = useDashboardModulePermissions("staffs");
+  const isSuperAdmin = user?.role === "super_admin";
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -83,19 +110,30 @@ export default function StaffsClient({
   }, [initialStaffs]);
 
   const availableRoleOptions = useMemo(() => {
+    const baseOptions = isSuperAdmin
+      ? ROLE_OPTIONS
+      : ROLE_OPTIONS.filter((role) =>
+          ["blog_manager", "cashier", "ticket_office", "door_staff"].includes(
+            role.value,
+          ),
+        );
+
     if (!editingItem?.role) {
-      return ROLE_OPTIONS;
+      return baseOptions;
     }
 
-    if (ROLE_OPTIONS.some((role) => role.value === editingItem.role)) {
-      return ROLE_OPTIONS;
+    if (baseOptions.some((role) => role.value === editingItem.role)) {
+      return baseOptions;
     }
 
     return [
-      ...ROLE_OPTIONS,
-      { value: editingItem.role, label: editingItem.role },
+      ...baseOptions,
+      {
+        value: editingItem.role,
+        label: DASHBOARD_ROLE_LABELS[editingItem.role] || editingItem.role,
+      },
     ];
-  }, [editingItem]);
+  }, [editingItem, isSuperAdmin]);
 
   const openCreateModal = () => {
     setFormState(createEmptyForm());
@@ -116,6 +154,11 @@ export default function StaffsClient({
       role: item.role || "ticket_office",
       password: "",
       confirmPassword: "",
+      permissionsState: buildPermissionsState(item.roleDetails?.permissions, {
+        legacyFullAccess:
+          item.role === "admin" &&
+          item.roleDetails?.permissionsConfigured !== true,
+      }),
     });
     setFormError("");
     setIsEditOpen(true);
@@ -134,6 +177,19 @@ export default function StaffsClient({
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setFormState((current) => ({ ...current, [name]: value }));
+  };
+
+  const handlePermissionToggle = (moduleKey, action) => {
+    setFormState((current) => ({
+      ...current,
+      permissionsState: {
+        ...current.permissionsState,
+        [moduleKey]: {
+          ...current.permissionsState?.[moduleKey],
+          [action]: !current.permissionsState?.[moduleKey]?.[action],
+        },
+      },
+    }));
   };
 
   const buildPayload = ({ requirePassword = false } = {}) => {
@@ -155,6 +211,14 @@ export default function StaffsClient({
 
     if (!role) {
       return { ok: false, message: "Veuillez sélectionner un rôle." };
+    }
+
+    if ((role === "admin" || role === "super_admin") && !isSuperAdmin) {
+      return {
+        ok: false,
+        message:
+          "Seul le super administrateur peut gérer des comptes administrateurs.",
+      };
     }
 
     if (requirePassword && !password) {
@@ -181,6 +245,10 @@ export default function StaffsClient({
         phone: phone || undefined,
         role,
         password: password || undefined,
+        permissions:
+          role === "admin" && isSuperAdmin
+            ? flattenPermissionsState(formState.permissionsState)
+            : undefined,
       },
     };
   };
@@ -321,15 +389,17 @@ export default function StaffsClient({
               Gérez les membres du personnel et leurs accès.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
-            >
-              <Icon name="plus" className="h-5 w-5" />
-              Ajouter un staff
-            </button>
+        <div className="flex flex-wrap items-center gap-3">
+            {permissions.canCreate ? (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+              >
+                <Icon name="plus" className="h-5 w-5" />
+                Ajouter un staff
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -374,8 +444,7 @@ export default function StaffsClient({
                       .filter(Boolean)
                       .join(" ");
                     const roleLabel =
-                      ROLE_OPTIONS.find((role) => role.value === item.role)
-                        ?.label ||
+                      DASHBOARD_ROLE_LABELS[item.role] ||
                       item.role ||
                       "-";
                     const roleStyle =
@@ -384,6 +453,12 @@ export default function StaffsClient({
                       item.status === "suspended" ? "suspended" : "active";
                     const statusLabel = STATUS_LABELS[statusValue];
                     const isActive = statusValue === "active";
+                    const canManageAdminAccount =
+                      isSuperAdmin ||
+                      (item.role !== "admin" && item.role !== "super_admin");
+                    const canToggle = permissions.canUpdate && canManageAdminAccount;
+                    const canEdit = permissions.canUpdate && canManageAdminAccount;
+                    const canDelete = permissions.canDelete && canManageAdminAccount;
 
                     return (
                       <tr key={item.id} className="hover:bg-slate-50">
@@ -413,11 +488,11 @@ export default function StaffsClient({
                               role="switch"
                               aria-checked={isActive}
                               onClick={() => handleToggleStatus(item)}
-                              disabled={statusUpdatingId === item.id}
+                              disabled={!canToggle || statusUpdatingId === item.id}
                               className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                                 isActive ? "bg-emerald-500" : "bg-slate-300"
                               } ${
-                                statusUpdatingId === item.id
+                                !canToggle || statusUpdatingId === item.id
                                   ? "cursor-not-allowed opacity-70"
                                   : "hover:opacity-90"
                               }`}
@@ -436,7 +511,8 @@ export default function StaffsClient({
                             <button
                               type="button"
                               onClick={() => openEditModal(item)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
+                              disabled={!canEdit}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
                               aria-label="Modifier"
                             >
                               <Icon name="pen" className="h-4 w-4" />
@@ -444,7 +520,8 @@ export default function StaffsClient({
                             <button
                               type="button"
                               onClick={() => setPendingDelete(item)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
+                              disabled={!canDelete}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
                               aria-label="Supprimer"
                             >
                               <Icon name="trash" className="h-4 w-4" />
@@ -465,7 +542,13 @@ export default function StaffsClient({
             title="Ajouter un staff"
             description="Crée un nouveau membre du personnel."
             onClose={() => (isSaving ? null : closeModals())}
-            maxWidth="max-w-xl"
+            maxWidth={
+              isSuperAdmin && formState.role === "admin"
+                ? "max-w-6xl"
+                : "max-w-xl"
+            }
+            containerClassName="max-h-[90vh] overflow-hidden flex flex-col"
+            bodyClassName="min-h-0 flex-1 overflow-y-auto pr-1"
           >
             <form className="space-y-4" onSubmit={handleCreate}>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -543,6 +626,14 @@ export default function StaffsClient({
                   </div>
                 </div>
               </div>
+
+              {isSuperAdmin && formState.role === "admin" ? (
+                <AdminPermissionsMatrix
+                  value={formState.permissionsState}
+                  onToggle={handlePermissionToggle}
+                  disabled={isSaving}
+                />
+              ) : null}
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
@@ -638,7 +729,13 @@ export default function StaffsClient({
             title="Modifier le staff"
             description="Mettez à jour les informations du membre."
             onClose={() => (isSaving ? null : closeModals())}
-            maxWidth="max-w-xl"
+            maxWidth={
+              isSuperAdmin && formState.role === "admin"
+                ? "max-w-6xl"
+                : "max-w-xl"
+            }
+            containerClassName="max-h-[90vh] overflow-hidden flex flex-col"
+            bodyClassName="min-h-0 flex-1 overflow-y-auto pr-1"
           >
             <form className="space-y-4" onSubmit={handleUpdate}>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -716,6 +813,14 @@ export default function StaffsClient({
                   </div>
                 </div>
               </div>
+
+              {isSuperAdmin && formState.role === "admin" ? (
+                <AdminPermissionsMatrix
+                  value={formState.permissionsState}
+                  onToggle={handlePermissionToggle}
+                  disabled={isSaving}
+                />
+              ) : null}
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">

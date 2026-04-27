@@ -6,12 +6,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icons";
 import Modal from "@/components/ui/modal";
 import Toast from "@/components/ui/toast";
+import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions";
 import { useToast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/configurations/formatters";
 import { formatDate, toDateInputValue } from "@/lib/evenements/helpers";
 import {
   createPromoCode,
   deletePromoCode,
+  generatePromoCode,
   updatePromoCode,
   updatePromoCodeStatus,
 } from "@/services/promo-codes-actions";
@@ -24,15 +26,49 @@ const REDUCTION_TYPE_OPTIONS = [
   { value: "percent", label: "Pourcentage (%)" },
 ];
 
+const AVAILABILITY_OPTIONS = [
+  { value: "public", label: "Public" },
+  { value: "private", label: "Prive" },
+];
+const PROMO_CODE_PATTERN = /^[A-Z]{3}\d{3}$/;
+
 const createEmptyForm = () => ({
   code: "",
   reductionValue: "",
   reductionType: "amount",
+  availability: "public",
   expiresAt: "",
   totalUsageLimit: "",
   userUsageLimit: "",
   isActive: true,
 });
+
+const buildFallbackPromoCode = (existingItems = []) => {
+  const existingCodes = new Set(
+    (Array.isArray(existingItems) ? existingItems : [])
+      .map((item) => String(item?.code || "").trim().toUpperCase())
+      .filter(Boolean),
+  );
+
+  let attempts = 0;
+  while (attempts < 100) {
+    const letters = Array.from({ length: 3 }, () =>
+      String.fromCharCode(65 + Math.floor(Math.random() * 26)),
+    ).join("");
+    const digits = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+    const candidate = `${letters}${digits}`;
+
+    if (!existingCodes.has(candidate)) {
+      return candidate;
+    }
+
+    attempts += 1;
+  }
+
+  return "ABC123";
+};
 
 export default function CodesPromoClient({
   initialPromoCodes = [],
@@ -40,10 +76,12 @@ export default function CodesPromoClient({
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
+  const permissions = useDashboardModulePermissions("promo_codes");
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusUpdatingId, setStatusUpdatingId] = useState("");
   const [formState, setFormState] = useState(createEmptyForm);
@@ -70,11 +108,30 @@ export default function CodesPromoClient({
     return Number.isFinite(parsed) ? parsed : "-";
   };
 
-  const openCreateModal = () => {
-    setFormState(createEmptyForm());
+  const openCreateModal = async () => {
+    const fallbackCode = buildFallbackPromoCode(initialPromoCodes);
+
+    setFormState({
+      ...createEmptyForm(),
+      code: fallbackCode,
+    });
     setFormError("");
     setEditingItem(null);
     setIsCreateOpen(true);
+
+    setIsGeneratingCode(true);
+    try {
+      const result = await generatePromoCode();
+      if (!result?.ok || !result.code) {
+        return;
+      }
+
+      setFormState((current) =>
+        current.code === fallbackCode ? { ...current, code: result.code } : current,
+      );
+    } finally {
+      setIsGeneratingCode(false);
+    }
   };
 
   const openEditModal = (item) => {
@@ -85,6 +142,7 @@ export default function CodesPromoClient({
         ? String(item.reductionValue)
         : (item.reductionValue ?? ""),
       reductionType: item.reductionType || "amount",
+      availability: item.availability || "public",
       expiresAt: toDateInputValue(item.expiresAt),
       totalUsageLimit: Number.isFinite(item.totalUsageLimit)
         ? String(item.totalUsageLimit)
@@ -115,7 +173,7 @@ export default function CodesPromoClient({
         type === "checkbox"
           ? checked
           : name === "code"
-            ? value.toUpperCase()
+            ? value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6)
             : value,
     }));
   };
@@ -162,6 +220,14 @@ export default function CodesPromoClient({
       return { ok: false, message: "Veuillez saisir un code." };
     }
 
+    if (!PROMO_CODE_PATTERN.test(code)) {
+      return {
+        ok: false,
+        message:
+          "Le code doit contenir 3 lettres majuscules suivies de 3 chiffres.",
+      };
+    }
+
     if (reductionValue === null || reductionValue === undefined) {
       return { ok: false, message: "Veuillez saisir une valeur valide." };
     }
@@ -201,6 +267,7 @@ export default function CodesPromoClient({
         code,
         reductionValue,
         reductionType: formState.reductionType,
+        availability: formState.availability,
         expiresAt,
         totalUsageLimit,
         userUsageLimit,
@@ -344,14 +411,16 @@ export default function CodesPromoClient({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
-            >
-              <Icon name="plus" className="h-5 w-5" />
-              Ajouter un code
-            </button>
+            {permissions.canCreate ? (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+              >
+                <Icon name="plus" className="h-5 w-5" />
+                Ajouter un code
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -383,6 +452,7 @@ export default function CodesPromoClient({
                 <thead className="bg-slate-50 text-slate-500 font-semibold uppercase text-xs tracking-wider">
                   <tr>
                     <th className="px-6 py-4">Code</th>
+                    <th className="px-6 py-4">Disponibilite</th>
                     <th className="px-6 py-4">Réduction</th>
                     <th className="px-6 py-4">Expiration</th>
                     <th className="px-6 py-4">Limites</th>
@@ -409,6 +479,17 @@ export default function CodesPromoClient({
                         <td className="px-6 py-4 font-medium text-slate-900">
                           {item.code}
                         </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                              item.availability === "private"
+                                ? "border-slate-300 bg-slate-100 text-slate-700"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            }`}
+                          >
+                            {item.availability === "private" ? "Prive" : "Public"}
+                          </span>
+                        </td>
                         <td className="px-6 py-4 text-slate-900">
                           {reductionLabel}
                         </td>
@@ -431,11 +512,11 @@ export default function CodesPromoClient({
                             role="switch"
                             aria-checked={isActive}
                             onClick={() => handleToggleStatus(item)}
-                            disabled={statusUpdatingId === item.id}
+                            disabled={!permissions.canUpdate || statusUpdatingId === item.id}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                               isActive ? "bg-emerald-500" : "bg-slate-300"
                             } ${
-                              statusUpdatingId === item.id
+                              !permissions.canUpdate || statusUpdatingId === item.id
                                 ? "cursor-not-allowed opacity-70"
                                 : "hover:opacity-90"
                             }`}
@@ -450,22 +531,26 @@ export default function CodesPromoClient({
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-3">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(item)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
-                              aria-label="Modifier"
-                            >
-                              <Icon name="pen" className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPendingDelete(item)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
-                              aria-label="Supprimer"
-                            >
-                              <Icon name="trash" className="h-4 w-4" />
-                            </button>
+                            {permissions.canUpdate ? (
+                              <button
+                                type="button"
+                                onClick={() => openEditModal(item)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
+                                aria-label="Modifier"
+                              >
+                                <Icon name="pen" className="h-4 w-4" />
+                              </button>
+                            ) : null}
+                            {permissions.canDelete ? (
+                              <button
+                                type="button"
+                                onClick={() => setPendingDelete(item)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50"
+                                aria-label="Supprimer"
+                              >
+                                <Icon name="trash" className="h-4 w-4" />
+                              </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -477,7 +562,7 @@ export default function CodesPromoClient({
           )}
         </div>
 
-        {isCreateOpen ? (
+        {isCreateOpen && permissions.canCreate ? (
           <Modal
             title="Ajouter un code promo"
             description="Renseigne les détails du code promotionnel."
@@ -495,9 +580,14 @@ export default function CodesPromoClient({
                     type="text"
                     value={formState.code}
                     onChange={handleInputChange}
-                    placeholder="WELCOME10"
+                    placeholder="ABC123"
                     className={INPUT_CLASSES}
                   />
+                  {isGeneratingCode ? (
+                    <p className="text-xs text-slate-500">
+                      Generation d&apos;un code unique...
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">
@@ -519,6 +609,23 @@ export default function CodesPromoClient({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Disponibilite
+                  </label>
+                  <select
+                    name="availability"
+                    value={formState.availability}
+                    onChange={handleInputChange}
+                    className={INPUT_CLASSES}
+                  >
+                    {AVAILABILITY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">
                     Valeur
@@ -611,7 +718,7 @@ export default function CodesPromoClient({
           </Modal>
         ) : null}
 
-        {isEditOpen ? (
+        {isEditOpen && permissions.canUpdate ? (
           <Modal
             title="Modifier le code promo"
             description="Mets à jour les informations du code promo."
@@ -629,7 +736,7 @@ export default function CodesPromoClient({
                     type="text"
                     value={formState.code}
                     onChange={handleInputChange}
-                    placeholder="WELCOME10"
+                    placeholder="ABC123"
                     className={INPUT_CLASSES}
                   />
                 </div>
@@ -653,6 +760,23 @@ export default function CodesPromoClient({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Disponibilite
+                  </label>
+                  <select
+                    name="availability"
+                    value={formState.availability}
+                    onChange={handleInputChange}
+                    className={INPUT_CLASSES}
+                  >
+                    {AVAILABILITY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">
                     Valeur
@@ -745,7 +869,7 @@ export default function CodesPromoClient({
           </Modal>
         ) : null}
 
-        {pendingDelete ? (
+        {pendingDelete && permissions.canDelete ? (
           <Modal
             title="Supprimer le code promo"
             description={`Confirmer la suppression de "${pendingDelete.code}" ?`}

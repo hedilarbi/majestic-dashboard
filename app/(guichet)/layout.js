@@ -40,8 +40,16 @@ const getGuichetUser = async () => {
 
   const role = data?.user?.role;
 
-  if (role === "admin") {
+  if (role === "admin" || role === "super_admin") {
     redirect("/");
+  }
+
+  if (role === "blog_manager") {
+    redirect("/blogue");
+  }
+
+  if (role === "cashier") {
+    redirect("/caissier");
   }
 
   if (!data?.user || role !== "ticket_office") {

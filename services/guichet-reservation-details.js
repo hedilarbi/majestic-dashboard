@@ -10,7 +10,7 @@ export const getGuichetReservationDetails = async (sessionId) => {
       ok: false,
       status: auth.message === "Configuration serveur manquante." ? 500 : 401,
       data: null,
-      message: auth.message || "Non authentifie.",
+      message: auth.message || "Non authentifié.",
     };
   }
 
@@ -45,7 +45,7 @@ export const getGuichetReservationDetails = async (sessionId) => {
       ok: false,
       status: 502,
       data: null,
-      message: "Impossible de charger la reservation.",
+      message: "Impossible de charger la réservation.",
     };
   }
 };

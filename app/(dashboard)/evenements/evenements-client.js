@@ -10,6 +10,7 @@ import EventFilters from "@/components/evenements/event-filters";
 import EventFormModal from "@/components/evenements/event-form-modal";
 import EventPagination from "@/components/evenements/event-pagination";
 import EventTable from "@/components/evenements/event-table";
+import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions";
 import {
   GENRE_OPTIONS,
   INITIAL_FORM,
@@ -29,6 +30,7 @@ export default function EvenementsClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const permissions = useDashboardModulePermissions("events");
   const [errorMessage, setErrorMessage] = useState(initialError);
   const [noticeMessage, setNoticeMessage] = useState("");
   const [query, setQuery] = useState(initialQuery);
@@ -392,14 +394,16 @@ export default function EvenementsClient({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
-          >
-            <Icon name="plus" className="h-5 w-5" />
-            Ajouter un événement
-          </button>
+          {permissions.canCreate ? (
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+            >
+              <Icon name="plus" className="h-5 w-5" />
+              Ajouter un événement
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -426,6 +430,8 @@ export default function EvenementsClient({
 
       <EventTable
         events={events}
+        canUpdate={permissions.canUpdate}
+        canDelete={permissions.canDelete}
         onDelete={(eventItem) => {
           setPendingDelete(eventItem);
           setIsDeleteOpen(true);
@@ -440,7 +446,7 @@ export default function EvenementsClient({
         hasPrev={pagination.hasPrev}
       />
 
-      {isCreateOpen ? (
+      {isCreateOpen && permissions.canCreate ? (
         <EventFormModal
           title="Ajouter un événement"
           description="Remplissez les informations pour créer un nouvel événement."
@@ -461,7 +467,7 @@ export default function EvenementsClient({
         />
       ) : null}
 
-      {isEditOpen ? (
+      {isEditOpen && permissions.canUpdate ? (
         <EventFormModal
           title="Modifier l'événement"
           description="Mettez à jour les informations de l'événement."
@@ -482,7 +488,7 @@ export default function EvenementsClient({
         />
       ) : null}
 
-      {isDeleteOpen ? (
+      {isDeleteOpen && permissions.canDelete ? (
         <ConfirmModal
           title="Supprimer l'événement"
           description={

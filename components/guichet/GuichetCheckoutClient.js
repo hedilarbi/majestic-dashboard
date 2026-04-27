@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Icon } from "@/components/ui/icons";
@@ -75,25 +76,25 @@ const normalizeOverrideMeta = (raw) => {
   }
 
   const nestedPricing =
-    raw.pricingId && typeof raw.pricingId === "object" ? raw.pricingId : null;
+  raw.pricingId && typeof raw.pricingId === "object" ? raw.pricingId : null;
   const source = nestedPricing || raw;
   const id =
-    source?._id ??
-    source?.id ??
-    raw?.pricingId ??
-    raw?.pricingOverrideId ??
-    raw?.id ??
-    "";
+  source?._id ??
+  source?.id ??
+  raw?.pricingId ??
+  raw?.pricingOverrideId ??
+  raw?.id ??
+  "";
   const name =
-    source?.name ?? source?.nom ?? raw?.label ?? raw?.name ?? raw?.nom ?? "";
+  source?.name ?? source?.nom ?? raw?.label ?? raw?.name ?? raw?.nom ?? "";
   const price =
-    source?.price ??
-    source?.prix ??
-    raw?.price ??
-    raw?.prix ??
-    raw?.amount ??
-    raw?.montant ??
-    null;
+  source?.price ??
+  source?.prix ??
+  raw?.price ??
+  raw?.prix ??
+  raw?.amount ??
+  raw?.montant ??
+  null;
 
   if (!id && !name && price === null) {
     return null;
@@ -102,14 +103,14 @@ const normalizeOverrideMeta = (raw) => {
   return {
     id: id ? String(id) : name ? String(name) : "",
     name,
-    price,
+    price
   };
 };
 
 const resolveSeatOverride = (seat) => {
   const override =
-    normalizeOverrideMeta(seat?.pricingOverride) ||
-    normalizeOverrideMeta(seat?.pricingOverrideId);
+  normalizeOverrideMeta(seat?.pricingOverride) ||
+  normalizeOverrideMeta(seat?.pricingOverrideId);
   if (!override) {
     return null;
   }
@@ -130,7 +131,7 @@ const formatSessionDateTime = (dateValue, timeValue) => {
   const formattedDate = new Intl.DateTimeFormat("fr-FR", {
     day: "2-digit",
     month: "2-digit",
-    year: "numeric",
+    year: "numeric"
   }).format(date);
 
   return formattedTime ? `${formattedDate} - ${formattedTime}` : formattedDate;
@@ -155,7 +156,7 @@ const buildQrImageSrc = (ticket) => {
   }
 
   return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-    value,
+    value
   )}`;
 };
 
@@ -165,7 +166,7 @@ function TicketPrintCard({ ticket, booking }) {
   const eventName = session?.event?.name || "Le majestic";
   const sessionDateTime = formatSessionDateTime(
     session?.date,
-    session?.sessionTime,
+    session?.sessionTime
   );
   const qrSrc = buildQrImageSrc(ticket);
 
@@ -178,8 +179,8 @@ function TicketPrintCard({ ticket, booking }) {
           width={260}
           height={82}
           className="h-full w-auto object-contain"
-          priority={false}
-        />
+          priority={false} />
+
       </div>
 
       <p className="mb-1 text-center text-[15px] font-black uppercase tracking-[0.08em]">
@@ -196,34 +197,34 @@ function TicketPrintCard({ ticket, booking }) {
       </p>
 
       <div className="mt-5 flex items-center justify-center">
-        {qrSrc ? (
-          // External QR image endpoint is dynamic; native img keeps print fidelity simple here.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={qrSrc}
-            alt={`QR ticket ${ticket?.code || ""}`}
-            className="h-[34mm] w-[34mm] object-contain"
-          />
-        ) : (
-          <div className="flex h-[34mm] w-[34mm] items-center justify-center rounded border border-slate-300 text-[10px] text-slate-500">
+        {qrSrc ?
+        // External QR image endpoint is dynamic; native img keeps print fidelity simple here.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={qrSrc}
+          alt={`QR ticket ${ticket?.code || ""}`}
+          className="h-[34mm] w-[34mm] object-contain" /> :
+
+
+        <div className="flex h-[34mm] w-[34mm] items-center justify-center rounded border border-slate-300 text-[10px] text-slate-500">
             QR indisponible
           </div>
-        )}
+        }
       </div>
 
       <p className="mt-auto break-all text-center text-[13px] font-semibold tracking-[0.03em]">
         {ticket?.code || "-"}
       </p>
-      {bookingNumber ? (
-        <p className="mt-1 text-center text-[10px] text-slate-500">
+      {bookingNumber ?
+      <p className="mt-1 text-center text-[10px] text-slate-500">
           {bookingNumber}
-        </p>
-      ) : null}
-    </article>
-  );
+        </p> :
+      null}
+    </article>);
+
 }
 
-function TicketPrintInterface({ booking, onPrint, isLoading }) {
+function TicketPrintInterface({ booking, onPrint, isLoading, isPrinting }) {
   const tickets = Array.isArray(booking?.tickets) ? booking.tickets : [];
 
   return (
@@ -239,56 +240,57 @@ function TicketPrintInterface({ booking, onPrint, isLoading }) {
         <button
           type="button"
           onClick={onPrint}
-          disabled={isLoading || tickets.length === 0}
+          disabled={isLoading || tickets.length === 0 || isPrinting}
           className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-widest transition ${
-            isLoading || tickets.length === 0
-              ? "cursor-not-allowed bg-slate-200 text-slate-400"
-              : "bg-primary text-white hover:opacity-90"
-          }`}
-        >
+          isLoading || tickets.length === 0 || isPrinting ?
+          "cursor-not-allowed bg-slate-200 text-slate-400" :
+          "bg-primary text-white hover:opacity-90"}`
+          }>
+
           <Icon name="ticket" className="h-4 w-4" />
-          Imprimer
+          {isPrinting ? "Impression..." : "Imprimer"}
         </button>
       </div>
 
-      {isLoading ? (
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-500">
+      {isLoading ?
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-500">
           Chargement des billets...
-        </div>
-      ) : null}
+        </div> :
+      null}
 
-      {!isLoading && tickets.length === 0 ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-700">
+      {!isLoading && tickets.length === 0 ?
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-700">
           Aucun billet trouvé pour ce booking.
-        </div>
-      ) : null}
+        </div> :
+      null}
 
       <div className="ticket-print-grid flex flex-wrap justify-center gap-5">
-        {tickets.map((ticket) => (
-          <TicketPrintCard
-            key={ticket.id || ticket.code}
-            ticket={ticket}
-            booking={booking}
-          />
-        ))}
+        {tickets.map((ticket) =>
+        <TicketPrintCard
+          key={ticket.id || ticket.code}
+          ticket={ticket}
+          booking={booking} />
+
+        )}
       </div>
-    </section>
-  );
+    </section>);
+
 }
 
 export default function GuichetCheckoutClient({
   ok,
   message,
-  reservation,
+  reservation: reservation,
   seats,
   pricingItems,
   pricingOverrides,
-  sessionId,
+  sessionId
 }) {
-  const safeSeats = useMemo(() => (Array.isArray(seats) ? seats : []), [seats]);
+  const router = useRouter();
+  const safeSeats = useMemo(() => Array.isArray(seats) ? seats : [], [seats]);
   const safePricingItems = useMemo(
-    () => (Array.isArray(pricingItems) ? pricingItems : []),
-    [pricingItems],
+    () => Array.isArray(pricingItems) ? pricingItems : [],
+    [pricingItems]
   );
   const pricingItemsList = useMemo(() => {
     const byKey = new Map();
@@ -302,18 +304,18 @@ export default function GuichetCheckoutClient({
 
     return Array.from(byKey.entries()).map(([itemKey, item]) => ({
       itemKey,
-      item,
+      item
     }));
   }, [safePricingItems]);
   const overridesList = useMemo(
-    () => (Array.isArray(pricingOverrides) ? pricingOverrides : []),
-    [pricingOverrides],
+    () => Array.isArray(pricingOverrides) ? pricingOverrides : [],
+    [pricingOverrides]
   );
   const [quantities, setQuantities] = useState({});
   const [submitState, setSubmitState] = useState({
     status: "idle",
     message: "",
-    booking: null,
+    booking: null
   });
   const [subscriptionCodeInput, setSubscriptionCodeInput] = useState("");
   const [promoCodeInput, setPromoCodeInput] = useState("");
@@ -321,11 +323,14 @@ export default function GuichetCheckoutClient({
     status: "idle",
     message: "",
     promo: null,
-    pricing: null,
+    pricing: null
   });
   const promoValidationContextRef = useRef({ subtotal: 0, seatsCount: 0 });
+  const printRedirectHandledRef = useRef(false);
   const [printBooking, setPrintBooking] = useState(null);
   const [isLoadingPrintBooking, setIsLoadingPrintBooking] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const bookingForPrint = printBooking || submitState.booking || null;
 
   const loadBookingForPrint = useCallback(async (bookingId) => {
     if (!bookingId) {
@@ -337,7 +342,7 @@ export default function GuichetCheckoutClient({
     try {
       const response = await fetch(`/api/guichet/bookings/${bookingId}`, {
         method: "GET",
-        cache: "no-store",
+        cache: "no-store"
       });
       const data = await response.json().catch(() => ({}));
 
@@ -351,22 +356,71 @@ export default function GuichetCheckoutClient({
       setSubmitState((prev) => ({
         status: prev?.status === "success" ? prev.status : "error",
         message:
-          prev?.status === "success"
-            ? prev.message
-            : error?.message || "Impossible de charger les billets.",
-        booking: prev?.booking || null,
+        prev?.status === "success" ?
+        prev.message :
+        error?.message || "Impossible de charger les billets.",
+        booking: prev?.booking || null
       }));
     } finally {
       setIsLoadingPrintBooking(false);
     }
   }, []);
 
-  const handlePrint = useCallback(() => {
-    if (typeof window === "undefined") {
+  const handlePrint = useCallback(async () => {
+    if (typeof window === "undefined" || isPrinting) {
       return;
     }
+
+    if (bookingForPrint?.id) {
+      try {
+        await fetch(`/api/guichet/bookings/${bookingForPrint.id}/print`, {
+          method: "POST",
+        });
+      } catch (_error) {
+        // Do not block printing if the audit log request fails.
+      }
+    }
+
+    printRedirectHandledRef.current = false;
+    setIsPrinting(true);
     window.print();
-  }, []);
+  }, [bookingForPrint?.id, isPrinting]);
+
+  useEffect(() => {
+    if (!isPrinting || typeof window === "undefined") {
+      return undefined;
+    }
+
+    const redirectToGuichet = () => {
+      if (printRedirectHandledRef.current) {
+        return;
+      }
+
+      printRedirectHandledRef.current = true;
+      router.replace("/guichet");
+    };
+
+    const mediaQuery =
+    typeof window.matchMedia === "function" ?
+    window.matchMedia("print") :
+    null;
+    const handleAfterPrint = () => {
+      redirectToGuichet();
+    };
+    const handleMediaChange = (event) => {
+      if (!event.matches) {
+        redirectToGuichet();
+      }
+    };
+
+    window.addEventListener("afterprint", handleAfterPrint);
+    mediaQuery?.addEventListener?.("change", handleMediaChange);
+
+    return () => {
+      window.removeEventListener("afterprint", handleAfterPrint);
+      mediaQuery?.removeEventListener?.("change", handleMediaChange);
+    };
+  }, [isPrinting, router]);
 
   const overrideMap = useMemo(() => {
     const map = new Map();
@@ -382,9 +436,9 @@ export default function GuichetCheckoutClient({
         id: incoming.id || existing.id,
         name: incoming.name || existing.name,
         price:
-          incoming.price !== null && incoming.price !== undefined
-            ? incoming.price
-            : (existing.price ?? null),
+        incoming.price !== null && incoming.price !== undefined ?
+        incoming.price :
+        existing.price ?? null
       };
     };
 
@@ -402,12 +456,12 @@ export default function GuichetCheckoutClient({
         return;
       }
       const rawOverride =
-        override?.pricingId ??
-        override?.pricing ??
-        override?.tarif ??
-        override?.pricingOverride ??
-        override?.pricingOverrideId ??
-        override;
+      override?.pricingId ??
+      override?.pricing ??
+      override?.tarif ??
+      override?.pricingOverride ??
+      override?.pricingOverrideId ??
+      override;
       const meta = normalizeOverrideMeta(rawOverride);
       if (!meta) {
         return;
@@ -427,7 +481,7 @@ export default function GuichetCheckoutClient({
       }
       const baseOverride = resolveSeatOverride(seat);
       const mapOverride = overrideMap.get(
-        buildNormalizedSeatKey(seat.row, seat.col),
+        buildNormalizedSeatKey(seat.row, seat.col)
       );
 
       if (!baseOverride && !mapOverride) {
@@ -437,44 +491,44 @@ export default function GuichetCheckoutClient({
       return {
         id: baseOverride?.id || mapOverride?.id || "",
         name: baseOverride?.name || mapOverride?.name || "",
-        price: baseOverride?.price ?? mapOverride?.price ?? null,
+        price: baseOverride?.price ?? mapOverride?.price ?? null
       };
     },
-    [overrideMap],
+    [overrideMap]
   );
 
   const fixedSeats = useMemo(
     () =>
-      safeSeats.filter((seat) => {
-        return Boolean(getOverrideForSeat(seat));
-      }),
-    [getOverrideForSeat, safeSeats],
+    safeSeats.filter((seat) => {
+      return Boolean(getOverrideForSeat(seat));
+    }),
+    [getOverrideForSeat, safeSeats]
   );
   const assignableSeats = Math.max(safeSeats.length - fixedSeats.length, 0);
 
   const assignedCount = useMemo(
     () =>
-      Object.values(quantities).reduce(
-        (sum, value) => sum + (Number.isFinite(value) ? value : 0),
-        0,
-      ),
-    [quantities],
+    Object.values(quantities).reduce(
+      (sum, value) => sum + (Number.isFinite(value) ? value : 0),
+      0
+    ),
+    [quantities]
   );
   const remainingToAssign = Math.max(assignableSeats - assignedCount, 0);
   const isSubmitting = submitState.status === "loading";
   const isSuccess = submitState.status === "success";
   const canAdjust =
-    ok &&
-    Boolean(reservation) &&
-    assignableSeats > 0 &&
-    !isSubmitting &&
-    !isSuccess;
+  ok &&
+  Boolean(reservation) &&
+  assignableSeats > 0 &&
+  !isSubmitting &&
+  !isSuccess;
   const canConfirm =
-    ok &&
-    Boolean(reservation) &&
-    assignedCount === assignableSeats &&
-    !isSubmitting &&
-    !isSuccess;
+  ok &&
+  Boolean(reservation) &&
+  assignedCount === assignableSeats &&
+  !isSubmitting &&
+  !isSuccess;
 
   const fixedPricingGroups = useMemo(() => {
     if (!fixedSeats.length) {
@@ -491,15 +545,15 @@ export default function GuichetCheckoutClient({
 
     fixedSeats.forEach((seat) => {
       const overrideMeta = getOverrideForSeat(seat);
-      const pricingId = overrideMeta?.id
-        ? String(overrideMeta.id)
-        : String(seat.pricingOverrideId);
+      const pricingId = overrideMeta?.id ?
+      String(overrideMeta.id) :
+      String(seat.pricingOverrideId);
       const pricing = pricingById.get(pricingId);
       const entry = groups.get(pricingId) || {
         pricingId,
         label: overrideMeta?.name || pricing?.name || "Tarif fixe",
         price: overrideMeta?.price ?? pricing?.price,
-        seats: [],
+        seats: []
       };
 
       entry.seats.push(formatSeatLabel(seat));
@@ -511,50 +565,50 @@ export default function GuichetCheckoutClient({
 
   const fixedTotal = useMemo(
     () =>
-      fixedPricingGroups.reduce(
-        (sum, group) => sum + toNumber(group.price) * group.seats.length,
-        0,
-      ),
-    [fixedPricingGroups],
+    fixedPricingGroups.reduce(
+      (sum, group) => sum + toNumber(group.price) * group.seats.length,
+      0
+    ),
+    [fixedPricingGroups]
   );
 
   const variableTotal = useMemo(
     () =>
-      pricingItemsList.reduce((sum, { itemKey, item }) => {
-        const quantity = quantities[itemKey] || 0;
-        return sum + quantity * toNumber(item?.price);
-      }, 0),
-    [pricingItemsList, quantities],
+    pricingItemsList.reduce((sum, { itemKey, item }) => {
+      const quantity = quantities[itemKey] || 0;
+      return sum + quantity * toNumber(item?.price);
+    }, 0),
+    [pricingItemsList, quantities]
   );
 
   const totalPrice = fixedTotal + variableTotal;
   const normalizedSubscriptionCode = useMemo(
     () => normalizeSubscriptionCode(subscriptionCodeInput),
-    [subscriptionCodeInput],
+    [subscriptionCodeInput]
   );
   const normalizedPromoCode = useMemo(
     () => normalizePromoCode(promoCodeInput),
-    [promoCodeInput],
+    [promoCodeInput]
   );
   const isSubscriptionPaymentRequested = Boolean(normalizedSubscriptionCode);
   const canValidatePromo =
-    canConfirm &&
-    !isSubscriptionPaymentRequested &&
-    Boolean(normalizedPromoCode);
+  canConfirm &&
+  !isSubscriptionPaymentRequested &&
+  Boolean(normalizedPromoCode);
   const isPromoApplied =
-    promoState.status === "applied" && Boolean(promoState?.promo?.code);
+  promoState.status === "applied" && Boolean(promoState?.promo?.code);
   const appliedPromoCode = isPromoApplied ? String(promoState.promo.code) : "";
-  const promoDiscountAmount = isPromoApplied
-    ? toNumber(promoState?.pricing?.discountAmount)
-    : 0;
-  const promoReductionLabel = isPromoApplied
-    ? promoState?.promo?.reductionType === "percent"
-      ? `${toNumber(promoState?.promo?.reductionValue)}%`
-      : formatPrice(promoState?.promo?.reductionValue)
-    : "";
-  const payableTotal = isSubscriptionPaymentRequested
-    ? 0
-    : Math.max(totalPrice - promoDiscountAmount, 0);
+  const promoDiscountAmount = isPromoApplied ?
+  toNumber(promoState?.pricing?.discountAmount) :
+  0;
+  const promoReductionLabel = isPromoApplied ?
+  promoState?.promo?.reductionType === "percent" ?
+  `${toNumber(promoState?.promo?.reductionValue)}%` :
+  formatPrice(promoState?.promo?.reductionValue) :
+  "";
+  const payableTotal = isSubscriptionPaymentRequested ?
+  0 :
+  Math.max(totalPrice - promoDiscountAmount, 0);
 
   const handleIncrement = (itemKey) => {
     if (!canAdjust) {
@@ -564,7 +618,7 @@ export default function GuichetCheckoutClient({
     setQuantities((prev) => {
       const currentAssigned = Object.values(prev).reduce(
         (sum, value) => sum + (Number.isFinite(value) ? value : 0),
-        0,
+        0
       );
       if (currentAssigned >= assignableSeats) {
         return prev;
@@ -597,7 +651,7 @@ export default function GuichetCheckoutClient({
         setSubmitState({ status: "idle", message: "", booking: null });
       }
     },
-    [submitState.status],
+    [submitState.status]
   );
 
   const handlePromoCodeChange = useCallback(
@@ -610,11 +664,11 @@ export default function GuichetCheckoutClient({
           status: "idle",
           message: "",
           promo: null,
-          pricing: null,
+          pricing: null
         });
       }
     },
-    [promoState.status],
+    [promoState.status]
   );
 
   const handleCancelPromo = useCallback(() => {
@@ -632,7 +686,7 @@ export default function GuichetCheckoutClient({
       status: "loading",
       message: "",
       promo: null,
-      pricing: null,
+      pricing: null
     });
 
     try {
@@ -641,8 +695,8 @@ export default function GuichetCheckoutClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: normalizedPromoCode,
-          subtotalAmount: totalPrice,
-        }),
+          subtotalAmount: totalPrice
+        })
       });
 
       const data = await response.json().catch(() => ({}));
@@ -654,18 +708,18 @@ export default function GuichetCheckoutClient({
         status: "applied",
         message: "Code promo applique.",
         promo: data?.promo || null,
-        pricing: data?.pricing || null,
+        pricing: data?.pricing || null
       });
       promoValidationContextRef.current = {
         subtotal: totalPrice,
-        seatsCount: safeSeats.length,
+        seatsCount: safeSeats.length
       };
     } catch (error) {
       setPromoState({
         status: "error",
         message: error?.message || "Impossible de valider le code promo.",
         promo: null,
-        pricing: null,
+        pricing: null
       });
     }
   }, [canValidatePromo, normalizedPromoCode, safeSeats.length, totalPrice]);
@@ -677,10 +731,10 @@ export default function GuichetCheckoutClient({
 
     const context = promoValidationContextRef.current || {};
     const shouldClear =
-      isSubscriptionPaymentRequested ||
-      remainingToAssign !== 0 ||
-      context.subtotal !== totalPrice ||
-      context.seatsCount !== safeSeats.length;
+    isSubscriptionPaymentRequested ||
+    remainingToAssign !== 0 ||
+    context.subtotal !== totalPrice ||
+    context.seatsCount !== safeSeats.length;
 
     if (!shouldClear) {
       return;
@@ -688,19 +742,19 @@ export default function GuichetCheckoutClient({
 
     setPromoState({
       status: "idle",
-      message: isSubscriptionPaymentRequested
-        ? "Le code promo n'est pas applicable avec un paiement abonnement."
-        : "Le panier a change. Merci de revalider le code promo.",
+      message: isSubscriptionPaymentRequested ?
+      "Le code promo n'est pas applicable avec un paiement abonnement." :
+      "Le panier a change. Merci de revalider le code promo.",
       promo: null,
-      pricing: null,
+      pricing: null
     });
   }, [
-    isSubscriptionPaymentRequested,
-    promoState.status,
-    remainingToAssign,
-    safeSeats.length,
-    totalPrice,
-  ]);
+  isSubscriptionPaymentRequested,
+  promoState.status,
+  remainingToAssign,
+  safeSeats.length,
+  totalPrice]
+  );
 
   const handleConfirm = useCallback(async () => {
     if (!canConfirm || !sessionId) {
@@ -709,32 +763,33 @@ export default function GuichetCheckoutClient({
 
     setSubmitState({ status: "loading", message: "", booking: null });
     setPrintBooking(null);
+    setIsPrinting(false);
 
-    const selections = pricingItemsList
-      .map(({ itemKey, item }) => {
-        const quantity = quantities[itemKey] || 0;
-        if (!quantity) {
-          return null;
-        }
-        return {
-          pricingId: item?.id ?? null,
-          name: item?.name,
-          price: item?.price,
-          quantity,
-        };
-      })
-      .filter(Boolean);
+    const selections = pricingItemsList.
+    map(({ itemKey, item }) => {
+      const quantity = quantities[itemKey] || 0;
+      if (!quantity) {
+        return null;
+      }
+      return {
+        pricingId: item?.id ?? null,
+        name: item?.name,
+        price: item?.price,
+        quantity
+      };
+    }).
+    filter(Boolean);
 
     const selectedCount = selections.reduce(
       (sum, selection) => sum + (Number.parseInt(selection?.quantity, 10) || 0),
-      0,
+      0
     );
 
     if (selectedCount !== assignedCount) {
       setSubmitState({
         status: "error",
-        message: "Incoherence des quantites de tarifs. Merci de reessayer.",
-        booking: null,
+        message: "Incohérence des quantités de tarifs. Merci de réessayer.",
+        booking: null
       });
       return;
     }
@@ -748,8 +803,8 @@ export default function GuichetCheckoutClient({
           reservationId: reservation?.reservationId ?? null,
           pricingSelections: selections,
           subscriptionCode: normalizedSubscriptionCode || undefined,
-          promoCode: appliedPromoCode || undefined,
-        }),
+          promoCode: appliedPromoCode || undefined
+        })
       });
 
       const data = await response.json().catch(() => ({}));
@@ -760,10 +815,10 @@ export default function GuichetCheckoutClient({
       setSubmitState({
         status: "success",
         message: "Vente confirmée.",
-        booking: data?.booking || null,
+        booking: data?.booking || null
       });
       const createdBookingId =
-        data?.booking?.id || data?.booking?._id || data?.bookingId || "";
+      data?.booking?.id || data?.booking?._id || data?.bookingId || "";
       if (createdBookingId) {
         await loadBookingForPrint(String(createdBookingId));
       }
@@ -771,24 +826,22 @@ export default function GuichetCheckoutClient({
       setSubmitState({
         status: "error",
         message: error?.message || "Erreur lors de la confirmation.",
-        booking: null,
+        booking: null
       });
     }
   }, [
-    appliedPromoCode,
-    assignedCount,
-    canConfirm,
-    normalizedSubscriptionCode,
-    pricingItemsList,
-    quantities,
-    reservation,
-    sessionId,
-    loadBookingForPrint,
-  ]);
+  appliedPromoCode,
+  assignedCount,
+  canConfirm,
+  normalizedSubscriptionCode,
+  pricingItemsList,
+  quantities,
+  reservation,
+  sessionId,
+  loadBookingForPrint]
+  );
 
   const shouldShowPrintInterface = submitState.status === "success";
-  const bookingForPrint = printBooking || submitState.booking || null;
-
   if (shouldShowPrintInterface) {
     return (
       <>
@@ -852,23 +905,24 @@ export default function GuichetCheckoutClient({
           booking={bookingForPrint}
           onPrint={handlePrint}
           isLoading={isLoadingPrintBooking}
-        />
-      </>
-    );
+          isPrinting={isPrinting} />
+
+      </>);
+
   }
 
   return (
     <section className="lg:col-span-8 flex flex-col gap-6">
-      {!ok ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-          {message || "Impossible de charger la reservation."}
-        </div>
-      ) : null}
-      {ok && !reservation ? (
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
-          Aucune reservation en cours pour cette seance.
-        </div>
-      ) : null}
+      {!ok ?
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+          {message || "Impossible de charger la réservation."}
+        </div> :
+      null}
+      {ok && !reservation ?
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
+          Aucune réservation en cours pour cette séance.
+        </div> :
+      null}
       <div className="flex flex-wrap gap-4">
         <div className="flex min-w-[240px] flex-1 items-center justify-between rounded-2xl p-6 bg-white border border-slate-100 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)]">
           <div className="flex flex-col gap-1">
@@ -890,17 +944,17 @@ export default function GuichetCheckoutClient({
       </div>
 
       <div className="flex flex-col gap-4">
-        {pricingItemsList.length ? (
-          pricingItemsList.map(({ itemKey, item }) => {
-            const quantity = quantities[itemKey] || 0;
-            const canIncrement = canAdjust && assignedCount < assignableSeats;
-            const canDecrement = canAdjust && quantity > 0;
+        {pricingItemsList.length ?
+        pricingItemsList.map(({ itemKey, item }) => {
+          const quantity = quantities[itemKey] || 0;
+          const canIncrement = canAdjust && assignedCount < assignableSeats;
+          const canDecrement = canAdjust && quantity > 0;
 
-            return (
-              <div
-                key={itemKey}
-                className="flex flex-wrap items-center gap-4 bg-white border border-slate-100 rounded-2xl px-6 min-h-[96px] py-4 justify-between hover:border-primary/20 transition-all shadow-[0_14px_30px_-26px_rgba(15,23,42,0.2)]"
-              >
+          return (
+            <div
+              key={itemKey}
+              className="flex flex-wrap items-center gap-4 bg-white border border-slate-100 rounded-2xl px-6 min-h-[96px] py-4 justify-between hover:border-primary/20 transition-all shadow-[0_14px_30px_-26px_rgba(15,23,42,0.2)]">
+
                 <div className="flex items-center gap-5">
                   <div className="flex flex-col justify-center">
                     <p className="text-slate-900 text-base font-semibold leading-none mb-1">
@@ -914,58 +968,58 @@ export default function GuichetCheckoutClient({
                 <div className="shrink-0">
                   <div className="flex items-center gap-5">
                     <button
-                      type="button"
-                      disabled={!canDecrement}
-                      onClick={() => handleDecrement(itemKey)}
-                      className={`h-10 w-10 flex items-center justify-center rounded-full transition-all shadow-md ${
-                        canDecrement
-                          ? "bg-primary text-white hover:opacity-90"
-                          : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                      }`}
-                    >
+                    type="button"
+                    disabled={!canDecrement}
+                    onClick={() => handleDecrement(itemKey)}
+                    className={`h-10 w-10 flex items-center justify-center rounded-full transition-all shadow-md ${
+                    canDecrement ?
+                    "bg-primary text-white hover:opacity-90" :
+                    "bg-slate-200 text-slate-400 cursor-not-allowed"}`
+                    }>
+
                       <Icon name="minus" className="h-4 w-4" />
                     </button>
                     <input
-                      className="text-2xl font-semibold w-8 p-0 text-center bg-transparent border-none focus:ring-0 text-slate-900"
-                      readOnly
-                      type="number"
-                      value={quantity}
-                    />
+                    className="text-2xl font-semibold w-8 p-0 text-center bg-transparent border-none focus:ring-0 text-slate-900"
+                    readOnly
+                    type="number"
+                    value={quantity} />
+
                     <button
-                      type="button"
-                      disabled={!canIncrement}
-                      onClick={() => handleIncrement(itemKey)}
-                      className={`h-10 w-10 flex items-center justify-center rounded-full transition-all shadow-md ${
-                        canIncrement
-                          ? "bg-primary text-white hover:opacity-90"
-                          : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                      }`}
-                    >
+                    type="button"
+                    disabled={!canIncrement}
+                    onClick={() => handleIncrement(itemKey)}
+                    className={`h-10 w-10 flex items-center justify-center rounded-full transition-all shadow-md ${
+                    canIncrement ?
+                    "bg-primary text-white hover:opacity-90" :
+                    "bg-slate-200 text-slate-400 cursor-not-allowed"}`
+                    }>
+
                       <Icon name="plus" className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5 text-sm font-semibold text-slate-500">
+              </div>);
+
+        }) :
+
+        <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5 text-sm font-semibold text-slate-500">
             Aucun tarif disponible.
           </div>
-        )}
+        }
       </div>
 
-      {fixedPricingGroups.length ? (
-        <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5">
+      {fixedPricingGroups.length ?
+      <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">
             Tarifs fixes (imposés)
           </p>
           <div className="space-y-3">
-            {fixedPricingGroups.map((group) => (
-              <div
-                key={group.pricingId}
-                className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
-              >
+            {fixedPricingGroups.map((group) =>
+          <div
+            key={group.pricingId}
+            className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-slate-900">
                     {group.label}
@@ -978,18 +1032,15 @@ export default function GuichetCheckoutClient({
                   Sièges: {group.seats.join(", ")}
                 </div>
               </div>
-            ))}
+          )}
           </div>
           <p className="mt-4 text-xs font-semibold text-slate-500">
             Ces sièges ont un tarif fixe et ne peuvent pas être modifiés.
           </p>
-        </div>
-      ) : null}
+        </div> :
+      null}
 
       <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5">
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-          Paiement abonnement (optionnel)
-        </p>
         <label className="mt-3 flex flex-col gap-2">
           <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
             Code abonnement
@@ -1000,20 +1051,18 @@ export default function GuichetCheckoutClient({
             placeholder="SUB-XXXXXX-XXXXXX"
             disabled={isSubmitting || isSuccess}
             className={`h-11 rounded-xl border px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none ${
-              isSubmitting || isSuccess
-                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                : "border-slate-200 bg-white focus:border-primary"
-            }`}
-          />
+            isSubmitting || isSuccess ?
+            "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400" :
+            "border-slate-200 bg-white focus:border-primary"}`
+            } />
+
         </label>
-        <p className="mt-2 text-xs font-semibold text-slate-500">
-          Si code valide, 1 credit sera debite par siege.
-        </p>
-        {isSubscriptionPaymentRequested ? (
-          <p className="mt-2 text-xs font-semibold text-emerald-600">
+
+        {isSubscriptionPaymentRequested ?
+        <p className="mt-2 text-xs font-semibold text-emerald-600">
             Mode abonnement actif.
-          </p>
-        ) : null}
+          </p> :
+        null}
       </div>
 
       <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5">
@@ -1026,14 +1075,14 @@ export default function GuichetCheckoutClient({
             onChange={handlePromoCodeChange}
             placeholder="PROMO2026"
             disabled={
-              isSubmitting || isSuccess || isSubscriptionPaymentRequested
+            isSubmitting || isSuccess || isSubscriptionPaymentRequested
             }
             className={`h-11 rounded-xl border px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none ${
-              isSubmitting || isSuccess || isSubscriptionPaymentRequested
-                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                : "border-slate-200 bg-white focus:border-primary"
-            }`}
-          />
+            isSubmitting || isSuccess || isSubscriptionPaymentRequested ?
+            "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400" :
+            "border-slate-200 bg-white focus:border-primary"}`
+            } />
+
         </label>
         <div className="mt-3 flex flex-wrap gap-3">
           <button
@@ -1041,11 +1090,11 @@ export default function GuichetCheckoutClient({
             onClick={handleValidatePromo}
             disabled={!canValidatePromo || promoState.status === "loading"}
             className={`inline-flex h-10 items-center justify-center rounded-xl px-4 text-xs font-semibold uppercase tracking-widest transition-all ${
-              canValidatePromo && promoState.status !== "loading"
-                ? "bg-primary text-white hover:opacity-90"
-                : "cursor-not-allowed bg-slate-200 text-slate-400"
-            }`}
-          >
+            canValidatePromo && promoState.status !== "loading" ?
+            "bg-primary text-white hover:opacity-90" :
+            "cursor-not-allowed bg-slate-200 text-slate-400"}`
+            }>
+
             {promoState.status === "loading" ? "Validation..." : "Valider"}
           </button>
           <button
@@ -1053,36 +1102,36 @@ export default function GuichetCheckoutClient({
             onClick={handleCancelPromo}
             disabled={isSubmitting || isSuccess}
             className={`inline-flex h-10 items-center justify-center rounded-xl border px-4 text-xs font-semibold uppercase tracking-widest transition-all ${
-              isSubmitting || isSuccess
-                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                : "border-slate-200 bg-white text-slate-700 hover:border-primary hover:text-primary"
-            }`}
-          >
+            isSubmitting || isSuccess ?
+            "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400" :
+            "border-slate-200 bg-white text-slate-700 hover:border-primary hover:text-primary"}`
+            }>
+
             Annuler
           </button>
         </div>
-        {isPromoApplied ? (
-          <p className="mt-3 text-xs font-semibold text-emerald-600">
+        {isPromoApplied ?
+        <p className="mt-3 text-xs font-semibold text-emerald-600">
             Code applique: {appliedPromoCode} ({promoReductionLabel}) -
             reduction {formatPrice(promoDiscountAmount)}.
-          </p>
-        ) : null}
-        {!isPromoApplied && promoState.message ? (
-          <p
-            className={`mt-3 text-xs font-semibold ${
-              promoState.status === "error" ? "text-rose-700" : "text-slate-500"
-            }`}
-          >
+          </p> :
+        null}
+        {!isPromoApplied && promoState.message ?
+        <p
+          className={`mt-3 text-xs font-semibold ${
+          promoState.status === "error" ? "text-rose-700" : "text-slate-500"}`
+          }>
+
             {promoState.message}
-          </p>
-        ) : null}
+          </p> :
+        null}
       </div>
 
-      {submitState.status === "error" ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+      {submitState.status === "error" ?
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
           {submitState.message || "Une erreur est survenue."}
-        </div>
-      ) : null}
+        </div> :
+      null}
 
       <div className="mt-4 p-8 bg-white rounded-2xl border-t-4 border-primary shadow-[0_20px_45px_-35px_rgba(15,23,42,0.4)] flex flex-col md:flex-row items-center justify-between gap-6">
         <div>
@@ -1092,44 +1141,44 @@ export default function GuichetCheckoutClient({
           <p className="text-slate-900 text-base font-secondary font-semibold">
             {formatPrice(payableTotal)}
           </p>
-          {isSubscriptionPaymentRequested ? (
-            <p className="mt-1 text-xs font-semibold text-slate-400 line-through">
+          {isSubscriptionPaymentRequested ?
+          <p className="mt-1 text-xs font-semibold text-slate-400 line-through">
               Montant hors abonnement: {formatPrice(totalPrice)}
-            </p>
-          ) : null}
-          {!isSubscriptionPaymentRequested && isPromoApplied ? (
-            <>
+            </p> :
+          null}
+          {!isSubscriptionPaymentRequested && isPromoApplied ?
+          <>
               <p className="mt-1 text-xs font-semibold text-slate-400 line-through">
                 Montant initial: {formatPrice(totalPrice)}
               </p>
               <p className="mt-1 text-xs font-semibold text-emerald-600">
                 Reduction promo: -{formatPrice(promoDiscountAmount)}
               </p>
-            </>
-          ) : null}
+            </> :
+          null}
         </div>
         <button
           type="button"
           disabled={!canConfirm}
           onClick={handleConfirm}
           className={`w-full md:w-auto px-10 py-5 font-semibold text-base rounded-xl transition-all flex items-center justify-center gap-3 ${
-            canConfirm
-              ? "bg-primary text-white hover:translate-y-[-2px] hover:shadow-lg"
-              : "bg-slate-200 text-slate-400 cursor-not-allowed"
-          }`}
-        >
+          canConfirm ?
+          "bg-primary text-white hover:translate-y-[-2px] hover:shadow-lg" :
+          "bg-slate-200 text-slate-400 cursor-not-allowed"}`
+          }>
+
           {isSubmitting ? "Confirmation..." : "Confirmer"}
           <Icon name="chevronDown" className="h-4 w-4 -rotate-90" />
         </button>
       </div>
-      {submitState.status === "success" ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+      {submitState.status === "success" ?
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
           {submitState.message}
-          {submitState.booking?.bookingNumber
-            ? ` Numéro: ${submitState.booking.bookingNumber}.`
-            : ""}
-        </div>
-      ) : null}
-    </section>
-  );
+          {submitState.booking?.bookingNumber ?
+        ` Numéro: ${submitState.booking.bookingNumber}.` :
+        ""}
+        </div> :
+      null}
+    </section>);
+
 }

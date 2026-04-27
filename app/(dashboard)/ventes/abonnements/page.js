@@ -1,15 +1,29 @@
+import DashboardAccessDenied from "@/components/dashboard/access-denied";
 import { formatDateTime, formatPrice } from "@/lib/configurations/formatters";
+import { canAccessDashboardPermission } from "@/services/dashboard-auth";
 import { getSalesSubscriptions } from "@/services/sales";
 
-const formatUser = (user) => {
-  if (!user) {
+const formatUser = (user, customerContact) => {
+  if (!user && !customerContact) {
     return "-";
   }
-  const name = `${user.firstName || ""} ${user.lastName || ""}`.trim();
-  return name || user.email || "-";
+  const source = user || customerContact;
+  const name = `${source.firstName || ""} ${source.lastName || ""}`.trim();
+  return name || source.email || "-";
 };
 
 export default async function AbonnementsVendusPage() {
+  const canList = await canAccessDashboardPermission(
+    "sales_subscriptions",
+    "list",
+  );
+
+  if (!canList) {
+    return (
+      <DashboardAccessDenied message="Vous n'avez pas la permission de consulter les abonnements vendus." />
+    );
+  }
+
   const { items, error } = await getSalesSubscriptions({ limit: 200 });
 
   return (
@@ -19,7 +33,7 @@ export default async function AbonnementsVendusPage() {
           Abonnements vendus
         </h1>
         <p className="text-sm text-slate-500">
-          Suivi des ventes d&apos;abonnements enregistrees.
+          Suivi des ventes d&apos;abonnements enregistrées.
         </p>
       </div>
 
@@ -52,7 +66,9 @@ export default async function AbonnementsVendusPage() {
               ) : (
                 items.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4">{formatUser(row.user)}</td>
+                    <td className="px-6 py-4">
+                      {formatUser(row.user, row.customerContact)}
+                    </td>
                     <td className="px-6 py-4">
                       {row.subscription?.name || "-"}
                     </td>

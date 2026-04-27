@@ -12,6 +12,16 @@ const NAV_ITEMS = [
     href: "/guichet/vente-de-billet",
   },
   {
+    label: "Abonnement",
+    icon: "users",
+    href: "/guichet/abonnements",
+  },
+  {
+    label: "Caisse",
+    icon: "money",
+    href: "/guichet/caisse",
+  },
+  {
     label: "Historique",
     icon: "clock",
     href: "/guichet/historique",

@@ -1,9 +1,11 @@
+import DashboardAccessDenied from "@/components/dashboard/access-denied";
 import {
   formatDate,
   formatDateTime,
   formatPrice,
 } from "@/lib/configurations/formatters";
 import { getTicketStatusMeta } from "@/lib/configurations/ticket-status";
+import { canAccessDashboardPermission } from "@/services/dashboard-auth";
 import { getSalesTickets } from "@/services/sales";
 
 const formatSeat = (seat) => {
@@ -34,7 +36,7 @@ const formatSessionLabel = (session) => {
     return "-";
   }
 
-  const eventName = session.event?.name || "Seance";
+  const eventName = session.event?.name || "Séance";
   const dateLabel = formatSessionDateOnly(session.date);
   const timeLabel = session.sessionTime || "";
 
@@ -42,6 +44,14 @@ const formatSessionLabel = (session) => {
 };
 
 export default async function BilletsPage() {
+  const canList = await canAccessDashboardPermission("sales_tickets", "list");
+
+  if (!canList) {
+    return (
+      <DashboardAccessDenied message="Vous n'avez pas la permission de consulter les billets." />
+    );
+  }
+
   const { items, error } = await getSalesTickets({ limit: 200 });
 
   return (
@@ -65,8 +75,8 @@ export default async function BilletsPage() {
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4 text-left font-semibold">Code</th>
-                <th className="px-6 py-4 text-left font-semibold">Seance</th>
-                <th className="px-6 py-4 text-left font-semibold">Siege</th>
+                <th className="px-6 py-4 text-left font-semibold">Séance</th>
+                <th className="px-6 py-4 text-left font-semibold">Siège</th>
                 <th className="px-6 py-4 text-left font-semibold">Tarif</th>
                 <th className="px-6 py-4 text-left font-semibold">Prix</th>
                 <th className="px-6 py-4 text-left font-semibold">Statut</th>
@@ -82,7 +92,7 @@ export default async function BilletsPage() {
                 </tr>
               ) : (
                 items.map((ticket) => {
-                  const statusMeta = getTicketStatusMeta(ticket.isScanned);
+                  const statusMeta = getTicketStatusMeta(ticket);
 
                   return (
                     <tr key={ticket.id} className="hover:bg-slate-50">
@@ -104,6 +114,10 @@ export default async function BilletsPage() {
                         {ticket.scannedAt ? (
                           <div className="mt-1 text-xs text-slate-500">
                             Scanne le {formatDateTime(ticket.scannedAt)}
+                          </div>
+                        ) : ticket.cancelledAt ? (
+                          <div className="mt-1 text-xs text-slate-500">
+                            Annule le {formatDateTime(ticket.cancelledAt)}
                           </div>
                         ) : null}
                       </td>
