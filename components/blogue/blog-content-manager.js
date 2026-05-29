@@ -50,8 +50,12 @@ const buildFormStateFromItem = (type, item) => ({
   ...createEmptyBlogFormState(type),
   title: item?.title || "",
   excerpt: item?.excerpt || "",
+  seoTitle: item?.seoTitle || "",
+  seoDescription: item?.seoDescription || "",
   isPublished: item?.isPublished !== false,
   image: item?.image || "",
+  images: Array.isArray(item?.images) ? item.images : [],
+  imageFiles: [],
   contentHtml: item?.contentHtml || "",
   videoUrl: item?.videoUrl || "",
   thumbnail: item?.thumbnail || "",
@@ -91,6 +95,7 @@ export default function BlogContentManager({
   const [isDeleting, setIsDeleting] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
   const [thumbnailPreview, setThumbnailPreview] = useState("");
+  const [albumPreviews, setAlbumPreviews] = useState([]);
 
   useEffect(() => {
     setItems(initialItems);
@@ -114,6 +119,7 @@ export default function BlogContentManager({
     setEditingItem(null);
     setImagePreview("");
     setThumbnailPreview("");
+    setAlbumPreviews([]);
   };
 
   const openCreateModal = () => {
@@ -127,6 +133,7 @@ export default function BlogContentManager({
     setFormState(buildFormStateFromItem(type, normalized));
     setImagePreview(normalized?.image || "");
     setThumbnailPreview(normalized?.thumbnail || "");
+    setAlbumPreviews(normalized?.images || []);
     setFormError("");
   };
 
@@ -164,6 +171,37 @@ export default function BlogContentManager({
     );
   };
 
+  const handleAlbumImagesChange = (event) => {
+    const newFiles = Array.from(event.target.files || []);
+    if (!newFiles.length) return;
+    setFormState((current) => ({
+      ...current,
+      imageFiles: [...(current.imageFiles || []), ...newFiles],
+    }));
+    setAlbumPreviews((current) => [
+      ...current,
+      ...newFiles.map((f) => URL.createObjectURL(f)),
+    ]);
+    event.target.value = "";
+  };
+
+  const handleAlbumImageRemove = (index) => {
+    const existingCount = (formState.images || []).length;
+    if (index < existingCount) {
+      setFormState((current) => ({
+        ...current,
+        images: current.images.filter((_, i) => i !== index),
+      }));
+    } else {
+      const fileIndex = index - existingCount;
+      setFormState((current) => ({
+        ...current,
+        imageFiles: current.imageFiles.filter((_, i) => i !== fileIndex),
+      }));
+    }
+    setAlbumPreviews((current) => current.filter((_, i) => i !== index));
+  };
+
   const buildPayload = () => {
     const payload = new FormData();
 
@@ -171,6 +209,8 @@ export default function BlogContentManager({
     payload.set("title", formState.title.trim());
     payload.set("excerpt", formState.excerpt.trim());
     payload.set("isPublished", String(formState.isPublished === true));
+    payload.set("seoTitle", formState.seoTitle?.trim() || "");
+    payload.set("seoDescription", formState.seoDescription?.trim() || "");
 
     if (type === "article") {
       payload.set("contentHtml", formState.contentHtml || "");
@@ -180,6 +220,9 @@ export default function BlogContentManager({
       } else if (formState.image) {
         payload.set("image", formState.image);
       }
+
+      (formState.images || []).forEach((url) => payload.append("images", url));
+      (formState.imageFiles || []).forEach((file) => payload.append("images", file));
     }
 
     if (type === "trailer") {
@@ -195,6 +238,12 @@ export default function BlogContentManager({
     if (type === "form") {
       payload.set("formDescription", formState.formDescription.trim());
       payload.set("questions", JSON.stringify(formState.questions || []));
+
+      if (formState.imageFile) {
+        payload.set("image", formState.imageFile);
+      } else if (formState.image) {
+        payload.set("image", formState.image);
+      }
     }
 
     return payload;
@@ -447,10 +496,13 @@ export default function BlogContentManager({
           isSubmitting={isSubmitting}
           imagePreview={imagePreview || formState.image}
           thumbnailPreview={thumbnailPreview || formState.thumbnail}
+          albumPreviews={albumPreviews}
           onInputChange={handleInputChange}
           onTogglePublished={handlePublishedToggle}
           onImageChange={handleImageChange}
           onThumbnailChange={handleThumbnailChange}
+          onAlbumImagesChange={handleAlbumImagesChange}
+          onAlbumImageRemove={handleAlbumImageRemove}
           onQuestionsChange={(questions) =>
             setFormState((current) => ({ ...current, questions }))
           }

@@ -33,6 +33,8 @@ export async function createSubscription({
   name,
   price,
   totalCredits,
+  maxSeatsPerSession,
+  allowedSeatType,
   expirationDate,
   description,
   isActive = true,
@@ -50,6 +52,7 @@ export async function createSubscription({
   const normalizedPrice = normalizeNumber(price);
   const normalizedCredits = normalizeNumber(totalCredits);
   const normalizedDate = normalizeDate(expirationDate);
+  const normalizedMaxSeats = normalizeNumber(maxSeatsPerSession);
 
   if (normalizedPrice === null) {
     return { ok: false, message: "Le prix est invalide." };
@@ -70,6 +73,8 @@ export async function createSubscription({
     expirationDate: normalizedDate,
     description: typeof description === "string" ? description.trim() : "",
     isActive: Boolean(isActive),
+    ...(normalizedMaxSeats !== null && { maxSeatsPerSession: normalizedMaxSeats }),
+    ...(allowedSeatType && { allowedSeatType }),
   };
 
   const response = await fetch(`${auth.baseUrl}/subscriptions`, {
@@ -100,6 +105,8 @@ export async function updateSubscription({
   name,
   price,
   totalCredits,
+  maxSeatsPerSession,
+  allowedSeatType,
   expirationDate,
   description,
   isActive = true,
@@ -121,6 +128,7 @@ export async function updateSubscription({
   const normalizedPrice = normalizeNumber(price);
   const normalizedCredits = normalizeNumber(totalCredits);
   const normalizedDate = normalizeDate(expirationDate);
+  const normalizedMaxSeats = normalizeNumber(maxSeatsPerSession);
 
   if (normalizedPrice === null) {
     return { ok: false, message: "Le prix est invalide." };
@@ -141,6 +149,8 @@ export async function updateSubscription({
     expirationDate: normalizedDate,
     description: typeof description === "string" ? description.trim() : "",
     isActive: Boolean(isActive),
+    ...(normalizedMaxSeats !== null && { maxSeatsPerSession: normalizedMaxSeats }),
+    ...(allowedSeatType && { allowedSeatType }),
   };
 
   const response = await fetch(

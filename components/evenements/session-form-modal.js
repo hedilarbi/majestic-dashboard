@@ -558,6 +558,7 @@ export default function SessionFormModal({
       }
 
       const limit = {
+        pricingId: item.id,
         name: item.name,
         price: parsedPrice,
       };

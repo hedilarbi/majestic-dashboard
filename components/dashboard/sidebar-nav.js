@@ -19,6 +19,7 @@ const NAV_ITEMS = [
 { label: "Événements", icon: "ticket", href: "/evenements", module: "events" },
 { label: "Séances", icon: "calendar", href: "/seances", module: "sessions" },
 { label: "Staffs", icon: "users", href: "/staffs", module: "staffs" },
+{ label: "Utilisateurs", icon: "users", href: "/utilisateurs", module: "users" },
 {
   label: "Demandes de réservation",
   icon: "form",

@@ -25,10 +25,17 @@ const STATUS_LABELS = {
   inactive: "Inactif",
 };
 
+const ALLOWED_SEAT_TYPE_OPTIONS = [
+  { value: "normale", label: "Siège normal" },
+  { value: "tarif_fixe", label: "Siège tarif fixe (VIP)" },
+];
+
 const createEmptyForm = () => ({
   name: "",
   price: "",
   totalCredits: "",
+  maxSeatsPerSession: "1",
+  allowedSeatType: "normale",
   expirationDate: "",
   description: "",
   isActive: true,
@@ -77,6 +84,10 @@ export default function AbonnementsClient({
       totalCredits: Number.isFinite(item.totalCredits)
         ? String(item.totalCredits)
         : item.totalCredits ?? "",
+      maxSeatsPerSession: Number.isFinite(item.maxSeatsPerSession)
+        ? String(item.maxSeatsPerSession)
+        : "1",
+      allowedSeatType: item.allowedSeatType || "normale",
       expirationDate: toDateInputValue(item.expirationDate),
       description: item.description || "",
       isActive: item.isActive !== false,
@@ -136,7 +147,9 @@ export default function AbonnementsClient({
     const description = formState.description.trim();
     const price = normalizeNumberInput(formState.price);
     const totalCredits = normalizeNumberInput(formState.totalCredits);
+    const maxSeatsPerSession = normalizeNumberInput(formState.maxSeatsPerSession);
     const expirationDate = normalizeDateInput(formState.expirationDate);
+    const allowedSeatType = formState.allowedSeatType || "normale";
 
     if (!name) {
       return { ok: false, message: "Veuillez saisir un nom." };
@@ -150,6 +163,10 @@ export default function AbonnementsClient({
       return { ok: false, message: "Veuillez saisir un nombre de crédits valide." };
     }
 
+    if (maxSeatsPerSession === null || maxSeatsPerSession < 1) {
+      return { ok: false, message: "Veuillez saisir une limite de sièges par séance valide (min. 1)." };
+    }
+
     if (!expirationDate) {
       return { ok: false, message: "Veuillez saisir une date d'expiration valide." };
     }
@@ -161,6 +178,8 @@ export default function AbonnementsClient({
         description,
         price,
         totalCredits,
+        maxSeatsPerSession,
+        allowedSeatType,
         expirationDate,
         isActive: Boolean(formState.isActive),
       },
@@ -275,6 +294,8 @@ export default function AbonnementsClient({
         name: item.name,
         price: item.price,
         totalCredits: item.totalCredits,
+        maxSeatsPerSession: item.maxSeatsPerSession ?? 1,
+        allowedSeatType: item.allowedSeatType || "normale",
         expirationDate: item.expirationDate,
         description: item.description ?? "",
         isActive: nextIsActive,
@@ -350,6 +371,8 @@ export default function AbonnementsClient({
                     <th className="px-6 py-4">Nom</th>
                     <th className="px-6 py-4">Prix</th>
                     <th className="px-6 py-4">Crédits</th>
+                    <th className="px-6 py-4">Sièges/séance</th>
+                    <th className="px-6 py-4">Type de siège</th>
                     <th className="px-6 py-4">Expiration</th>
                     <th className="px-6 py-4">Statut</th>
                     <th className="px-6 py-4 text-right">Actions</th>
@@ -376,6 +399,20 @@ export default function AbonnementsClient({
                           {Number.isFinite(item.totalCredits)
                             ? item.totalCredits
                             : "-"}
+                        </td>
+                        <td className="px-6 py-4">
+                          {Number.isFinite(item.maxSeatsPerSession)
+                            ? item.maxSeatsPerSession
+                            : "1"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            item.allowedSeatType === "tarif_fixe"
+                              ? "bg-purple-100 text-purple-700"
+                              : "bg-slate-100 text-slate-600"
+                          }`}>
+                            {item.allowedSeatType === "tarif_fixe" ? "VIP / Tarif fixe" : "Normal"}
+                          </span>
                         </td>
                         <td className="px-6 py-4">
                           {item.expirationDate
@@ -497,6 +534,41 @@ export default function AbonnementsClient({
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Limite de sièges par séance
+                  </label>
+                  <input
+                    name="maxSeatsPerSession"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={formState.maxSeatsPerSession}
+                    onChange={handleInputChange}
+                    className={INPUT_CLASSES}
+                    placeholder="1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Type de siège autorisé
+                  </label>
+                  <select
+                    name="allowedSeatType"
+                    value={formState.allowedSeatType}
+                    onChange={handleInputChange}
+                    className={INPUT_CLASSES}
+                  >
+                    {ALLOWED_SEAT_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
                   Date d&apos;expiration
@@ -607,6 +679,41 @@ export default function AbonnementsClient({
                     className={INPUT_CLASSES}
                     placeholder="0"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Limite de sièges par séance
+                  </label>
+                  <input
+                    name="maxSeatsPerSession"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={formState.maxSeatsPerSession}
+                    onChange={handleInputChange}
+                    className={INPUT_CLASSES}
+                    placeholder="1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Type de siège autorisé
+                  </label>
+                  <select
+                    name="allowedSeatType"
+                    value={formState.allowedSeatType}
+                    onChange={handleInputChange}
+                    className={INPUT_CLASSES}
+                  >
+                    {ALLOWED_SEAT_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

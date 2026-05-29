@@ -12,6 +12,11 @@ const NAV_ITEMS = [
     href: "/guichet/vente-de-billet",
   },
   {
+    label: "Correction de tarif",
+    icon: "swap",
+    href: "/guichet/correction-tarif",
+  },
+  {
     label: "Abonnement",
     icon: "users",
     href: "/guichet/abonnements",

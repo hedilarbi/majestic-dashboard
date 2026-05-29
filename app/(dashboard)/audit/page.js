@@ -26,11 +26,13 @@ const formatDateTime = (value) => {
 const ACTION_LABELS = {
   ticket_cancellation: "Annulation",
   ticket_print: "Impression",
+  ticket_print_cancelled: "Imp. annulée",
 };
 
 const ACTION_STYLES = {
   ticket_cancellation: "bg-rose-100 text-rose-700",
   ticket_print: "bg-sky-100 text-sky-700",
+  ticket_print_cancelled: "bg-amber-100 text-amber-700",
 };
 
 const ROLE_LABELS = {
@@ -43,7 +45,11 @@ const ROLE_LABELS = {
 };
 
 const getTypeFilter = (value) => {
-  if (value === "ticket_cancellation" || value === "ticket_print") {
+  if (
+    value === "ticket_cancellation" ||
+    value === "ticket_print" ||
+    value === "ticket_print_cancelled"
+  ) {
     return value;
   }
   return "";
@@ -93,6 +99,9 @@ export default async function AuditPage({ searchParams }) {
     (item) => item.actionType === "ticket_cancellation",
   ).length;
   const printCount = items.filter((item) => item.actionType === "ticket_print").length;
+  const printCancelledCount = items.filter(
+    (item) => item.actionType === "ticket_print_cancelled",
+  ).length;
 
   return (
     <div className="space-y-8">
@@ -117,6 +126,7 @@ export default async function AuditPage({ searchParams }) {
               <option value="">Tous</option>
               <option value="ticket_cancellation">Annulations</option>
               <option value="ticket_print">Impressions</option>
+              <option value="ticket_print_cancelled">Impressions annulées</option>
             </select>
           </label>
 
@@ -170,6 +180,12 @@ export default async function AuditPage({ searchParams }) {
           </p>
           <p className="mt-3 text-3xl font-semibold text-slate-900">{printCount}</p>
         </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
+            Imp. annulées
+          </p>
+          <p className="mt-3 text-3xl font-semibold text-amber-600">{printCancelledCount}</p>
+        </div>
       </div>
 
       {!ok ? (
@@ -216,7 +232,9 @@ export default async function AuditPage({ searchParams }) {
                             item?.details?.cancelledGrossAmount ??
                             0,
                         )
-                      : renderPricingBreakdown(item.pricingBreakdown);
+                      : item.actionType === "ticket_print_cancelled"
+                        ? `Annulé après ${item?.details?.printCount ?? 0} impression(s) précédente(s)`
+                        : renderPricingBreakdown(item.pricingBreakdown);
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50">

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import DashboardAccessDenied from "@/components/dashboard/access-denied";
 import ReservationRequestStatusAction from "@/components/reservation-requests/ReservationRequestStatusAction";
+import ReservationRequestReplyForm from "@/components/reservation-requests/ReservationRequestReplyForm";
 import { Icon } from "@/components/ui/icons";
 import { canAccessDashboardPermission } from "@/services/dashboard-auth";
 import { getReservationRequestDetails } from "@/services/reservation-requests";
@@ -121,6 +122,16 @@ export default async function ReservationRequestDetailsPage({ params }) {
               "-"}
           </p>
         </div>
+        {item.organisationName ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Organisation
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">
+              {item.organisationName}
+            </p>
+          </div>
+        ) : null}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Statut
@@ -168,10 +179,17 @@ export default async function ReservationRequestDetailsPage({ params }) {
       </div>
 
       {canUpdate ? (
-        <ReservationRequestStatusAction
-          requestId={item._id}
-          isProcessed={item.status === "processed"}
-        />
+        <div className="grid gap-4 md:grid-cols-2">
+          <ReservationRequestStatusAction
+            requestId={item._id}
+            isProcessed={item.status === "processed"}
+          />
+          <ReservationRequestReplyForm
+            requestId={item._id}
+            recipientEmail={item.email}
+            recipientName={fullName || item.email}
+          />
+        </div>
       ) : null}
     </div>
   );

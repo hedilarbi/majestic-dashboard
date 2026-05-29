@@ -183,9 +183,6 @@ function TicketPrintCard({ ticket, booking }) {
 
       </div>
 
-      <p className="mb-1 text-center text-[15px] font-black uppercase tracking-[0.08em]">
-        Le majestic
-      </p>
       <p className="px-1 text-center text-[18px] font-black leading-tight">
         {eventName}
       </p>
@@ -212,6 +209,10 @@ function TicketPrintCard({ ticket, booking }) {
         }
       </div>
 
+      <p className="mt-2 text-center text-[16px] font-black uppercase tracking-tight">
+        Siège : {ticket?.seat?.row}{ticket?.seat?.col}
+      </p>
+
       <p className="mt-auto break-all text-center text-[13px] font-semibold tracking-[0.03em]">
         {ticket?.code || "-"}
       </p>
@@ -224,14 +225,21 @@ function TicketPrintCard({ ticket, booking }) {
 
 }
 
-function TicketPrintInterface({ booking, onPrint, isLoading, isPrinting }) {
+function TicketPrintInterface({ booking, onPrint, isLoading, isPrinting, isPrintCancelled }) {
   const tickets = Array.isArray(booking?.tickets) ? booking.tickets : [];
+  const isDisabled = isLoading || tickets.length === 0 || isPrinting;
 
   return (
     <section className="guichet-print-root lg:col-span-8 space-y-5">
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
         Vente confirmée. Les billets sont prêts à être imprimés.
       </div>
+
+      {isPrintCancelled ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+          Impression annulée. Vous pouvez relancer l&apos;impression.
+        </div>
+      ) : null}
 
       <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3">
         <p className="text-sm font-semibold text-slate-700">
@@ -240,9 +248,9 @@ function TicketPrintInterface({ booking, onPrint, isLoading, isPrinting }) {
         <button
           type="button"
           onClick={onPrint}
-          disabled={isLoading || tickets.length === 0 || isPrinting}
+          disabled={isDisabled}
           className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-widest transition ${
-          isLoading || tickets.length === 0 || isPrinting ?
+          isDisabled ?
           "cursor-not-allowed bg-slate-200 text-slate-400" :
           "bg-primary text-white hover:opacity-90"}`
           }>
@@ -317,6 +325,7 @@ export default function GuichetCheckoutClient({
     message: "",
     booking: null
   });
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [subscriptionCodeInput, setSubscriptionCodeInput] = useState("");
   const [promoCodeInput, setPromoCodeInput] = useState("");
   const [promoState, setPromoState] = useState({
@@ -327,9 +336,14 @@ export default function GuichetCheckoutClient({
   });
   const promoValidationContextRef = useRef({ subtotal: 0, seatsCount: 0 });
   const printRedirectHandledRef = useRef(false);
+  const printDialogOpenRef = useRef(false);
+  const printFallbackTimerRef = useRef(null);
   const [printBooking, setPrintBooking] = useState(null);
   const [isLoadingPrintBooking, setIsLoadingPrintBooking] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false);
+  // "idle" | "printing" | "cancelled" | "done"
+  const [printState, setPrintState] = useState("idle");
+  const isPrinting = printState === "printing";
+  const isPrintCancelled = printState === "cancelled";
   const bookingForPrint = printBooking || submitState.booking || null;
 
   const loadBookingForPrint = useCallback(async (bookingId) => {
@@ -371,6 +385,11 @@ export default function GuichetCheckoutClient({
       return;
     }
 
+    // Reset cancelled state before retrying
+    if (printState === "cancelled") {
+      setPrintState("idle");
+    }
+
     if (bookingForPrint?.id) {
       try {
         await fetch(`/api/guichet/bookings/${bookingForPrint.id}/print`, {
@@ -382,45 +401,74 @@ export default function GuichetCheckoutClient({
     }
 
     printRedirectHandledRef.current = false;
-    setIsPrinting(true);
+    printDialogOpenRef.current = true;
+    setPrintState("printing");
     window.print();
-  }, [bookingForPrint?.id, isPrinting]);
+
+    // Fallback: if afterprint never fires (some browsers), recover after 30s
+    const fallbackTimer = setTimeout(() => {
+      setPrintState((prev) => (prev === "printing" ? "cancelled" : prev));
+    }, 30_000);
+
+    // Store the timer so afterprint can clear it
+    printFallbackTimerRef.current = fallbackTimer;
+  }, [bookingForPrint?.id, isPrinting, printState]);
 
   useEffect(() => {
-    if (!isPrinting || typeof window === "undefined") {
+    if (printState !== "printing" || typeof window === "undefined") {
       return undefined;
     }
 
-    const redirectToGuichet = () => {
+    // beforeprint fires when the dialog opens
+    const handleBeforePrint = () => {
+      printDialogOpenRef.current = true;
+    };
+
+    // afterprint fires whether the user printed OR cancelled the dialog
+    // We use a short timeout heuristic: if the dialog was open for < 500 ms
+    // it was likely cancelled, not printed. Most real printers take longer.
+    let dialogOpenedAt = Date.now();
+    const handleAfterPrint = () => {
+      // Clear the fallback timer — afterprint fired normally
+      if (printFallbackTimerRef.current) {
+        clearTimeout(printFallbackTimerRef.current);
+        printFallbackTimerRef.current = null;
+      }
+
+      const elapsed = Date.now() - dialogOpenedAt;
+      const likelyCancelled = elapsed < 500;
+
       if (printRedirectHandledRef.current) {
         return;
       }
 
-      printRedirectHandledRef.current = true;
-      router.replace("/guichet");
-    };
-
-    const mediaQuery =
-    typeof window.matchMedia === "function" ?
-    window.matchMedia("print") :
-    null;
-    const handleAfterPrint = () => {
-      redirectToGuichet();
-    };
-    const handleMediaChange = (event) => {
-      if (!event.matches) {
-        redirectToGuichet();
+      if (likelyCancelled) {
+        // User closed the dialog without printing — log cancellation and unlock the button
+        if (bookingForPrint?.id) {
+          fetch(`/api/guichet/bookings/${bookingForPrint.id}/print-cancelled`, {
+            method: "POST",
+          }).catch(() => {
+            // Non-blocking — do not prevent UI from recovering
+          });
+        }
+        setPrintState("cancelled");
+      } else {
+        // Actual print completed
+        printRedirectHandledRef.current = true;
+        setPrintState("done");
+        router.replace("/guichet");
       }
     };
 
+    dialogOpenedAt = Date.now();
+    window.addEventListener("beforeprint", handleBeforePrint);
     window.addEventListener("afterprint", handleAfterPrint);
-    mediaQuery?.addEventListener?.("change", handleMediaChange);
 
     return () => {
+      window.removeEventListener("beforeprint", handleBeforePrint);
       window.removeEventListener("afterprint", handleAfterPrint);
-      mediaQuery?.removeEventListener?.("change", handleMediaChange);
     };
-  }, [isPrinting, router]);
+  }, [printState, router]);
 
   const overrideMap = useMemo(() => {
     const map = new Map();
@@ -763,7 +811,7 @@ export default function GuichetCheckoutClient({
 
     setSubmitState({ status: "loading", message: "", booking: null });
     setPrintBooking(null);
-    setIsPrinting(false);
+    setPrintState("idle");
 
     const selections = pricingItemsList.
     map(({ itemKey, item }) => {
@@ -803,7 +851,8 @@ export default function GuichetCheckoutClient({
           reservationId: reservation?.reservationId ?? null,
           pricingSelections: selections,
           subscriptionCode: normalizedSubscriptionCode || undefined,
-          promoCode: appliedPromoCode || undefined
+          promoCode: appliedPromoCode || undefined,
+          paymentMethod: isSubscriptionPaymentRequested ? "online" : paymentMethod
         })
       });
 
@@ -848,8 +897,16 @@ export default function GuichetCheckoutClient({
         <style jsx global>{`
           @media print {
             @page {
-              size: 79mm 123mm;
+              /* Thermal receipt paper: 80mm roll, portrait */
+              size: 79mm auto;
+              orientation: portrait;
               margin: 0;
+            }
+
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: hidden !important;
             }
 
             body * {
@@ -862,10 +919,10 @@ export default function GuichetCheckoutClient({
             }
 
             .guichet-print-root {
-              position: absolute !important;
+              position: fixed !important;
               left: 0 !important;
               top: 0 !important;
-              width: 100% !important;
+              width: 79mm !important;
               margin: 0 !important;
               padding: 0 !important;
             }
@@ -876,19 +933,24 @@ export default function GuichetCheckoutClient({
 
             .ticket-print-grid {
               display: block !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
 
             .guichet-ticket-print-sheet {
               width: 79mm !important;
               min-width: 79mm !important;
               max-width: 79mm !important;
-              height: 123mm !important;
-              min-height: 123mm !important;
-              max-height: 123mm !important;
-              margin: 0 auto 0 !important;
+              /* auto height so content dictates cut length */
+              height: auto !important;
+              min-height: unset !important;
+              max-height: unset !important;
+              margin: 0 !important;
+              padding: 4mm !important;
               border: 0 !important;
               box-shadow: none !important;
               border-radius: 0 !important;
+              overflow: hidden !important;
               break-after: page;
               page-break-after: always;
               -webkit-print-color-adjust: exact;
@@ -905,7 +967,8 @@ export default function GuichetCheckoutClient({
           booking={bookingForPrint}
           onPrint={handlePrint}
           isLoading={isLoadingPrintBooking}
-          isPrinting={isPrinting} />
+          isPrinting={isPrinting}
+          isPrintCancelled={isPrintCancelled} />
 
       </>);
 
@@ -1157,6 +1220,41 @@ export default function GuichetCheckoutClient({
             </> :
           null}
         </div>
+
+        {!isSubscriptionPaymentRequested && (
+          <div className="flex flex-col gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Mode de paiement</p>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input 
+                  type="radio" 
+                  name="paymentMethod" 
+                  value="cash" 
+                  checked={paymentMethod === "cash"} 
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="h-4 w-4 text-primary focus:ring-primary/30 border-slate-300"
+                />
+                <span className={`text-sm font-medium ${paymentMethod === "cash" ? "text-primary" : "text-slate-600 group-hover:text-slate-900"}`}>
+                  💵 Espèces
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input 
+                  type="radio" 
+                  name="paymentMethod" 
+                  value="card" 
+                  checked={paymentMethod === "card"} 
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="h-4 w-4 text-primary focus:ring-primary/30 border-slate-300"
+                />
+                <span className={`text-sm font-medium ${paymentMethod === "card" ? "text-primary" : "text-slate-600 group-hover:text-slate-900"}`}>
+                  💳 TPE (Carte)
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
+
         <button
           type="button"
           disabled={!canConfirm}

@@ -369,6 +369,15 @@ export default function CodesPromoClient({
     }
   };
 
+  const handleCopyCode = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      showToast(`Code "${code}" copié dans le presse-papier.`, "success");
+    } catch {
+      showToast("Impossible de copier le code.", "error");
+    }
+  };
+
   const handleToggleStatus = async (item) => {
     if (!item?.id) {
       return;
@@ -486,6 +495,11 @@ export default function CodesPromoClient({
                                 ? "border-slate-300 bg-slate-100 text-slate-700"
                                 : "border-emerald-200 bg-emerald-50 text-emerald-700"
                             }`}
+                            title={
+                              item.availability === "private"
+                                ? "Ce code n'est pas visible publiquement. Partagez-le manuellement avec le client."
+                                : undefined
+                            }
                           >
                             {item.availability === "private" ? "Prive" : "Public"}
                           </span>
@@ -531,6 +545,17 @@ export default function CodesPromoClient({
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-3">
+                            {item.availability === "private" ? (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCode(item.code)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100"
+                                aria-label="Copier le code"
+                                title="Copier le code dans le presse-papier"
+                              >
+                                <Icon name="clipboard" className="h-4 w-4" />
+                              </button>
+                            ) : null}
                             {permissions.canUpdate ? (
                               <button
                                 type="button"

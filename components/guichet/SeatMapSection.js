@@ -5,25 +5,30 @@ import { formatPrice } from "@/lib/configurations/formatters";
 import { getSeatStatus, isAisleCell, seatKey } from "@/lib/guichet/seat-utils";
 
 const SeatIcon = ({ status, isMine }) => {
+  const iconClass = "h-7 w-7";
+
   if (status === "selected") {
-    return <RiArmchairFill className="h-7 w-7 text-primary" />;
+    return <RiArmchairFill className={`${iconClass} text-primary`} />;
   }
 
   if (status === "reserved" && isMine) {
-    return <RiArmchairFill className="h-7 w-7 text-primary" />;
+    return <RiArmchairFill className={`${iconClass} text-primary`} />;
+  }
+
+  if (status === "reserved") {
+    return <RiArmchairFill className={`${iconClass} text-violet-500`} />;
   }
 
   if (
     status === "occupied" ||
     status === "booked" ||
-    status === "reserved" ||
     status === "blocked" ||
     status === "staff"
   ) {
-    return <RiArmchairFill className="h-7 w-7 text-slate-300" />;
+    return <RiArmchairFill className={`${iconClass} text-rose-400`} />;
   }
 
-  return <RiArmchairLine className="h-7 w-7 text-slate-300" />;
+  return <RiArmchairLine className={`${iconClass} text-slate-300`} />;
 };
 
 const resolveOverrideMeta = (cell) => {
@@ -80,88 +85,90 @@ export default function SeatMapSection({
   loadError,
 }) {
   return (
-    <section className="flex-1 bg-slate-50/70 rounded-3xl border border-slate-200 p-6 lg:p-10 overflow-hidden">
-      <div className="flex flex-col items-center justify-center py-6">
-        <div className="w-full max-w-2xl mx-auto mb-12">
-          <div className="h-1.5 w-4/5 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent rounded-full shadow-[0_6px_18px_rgba(16,52,166,0.25)]" />
+    <section className="flex-1 bg-slate-50/70 rounded-3xl border border-slate-200 p-4 lg:p-8 overflow-auto min-h-[540px]">
+      <div className="flex flex-col items-center justify-start py-4">
+        <div className="w-full max-w-5xl mx-auto mb-10">
+          <div className="h-2 w-4/5 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent rounded-full shadow-[0_6px_18px_rgba(16,52,166,0.25)]" />
           <p className="mt-3 text-center text-slate-400 tracking-[0.6em] text-[10px] uppercase font-semibold">
             Écran
           </p>
         </div>
 
-        <div className="space-y-3">
-          {seatRows.map((row) => (
-            <div key={row.label} className="flex items-center gap-4">
-              <span className="w-4 text-[11px] font-semibold text-slate-400">
-                {row.label}
-              </span>
-              <div
-                className="grid gap-4"
-                style={{
-                  gridTemplateColumns: `repeat(${maxCols || 1}, minmax(0, 1fr))`,
-                }}
-              >
-                {row.cells.map((cell, index) => {
-                  if (!cell || isAisleCell(cell)) {
+        <div className="w-full overflow-x-auto pb-4">
+          <div className="inline-flex flex-col gap-2.5 mx-auto">
+            {seatRows.map((row) => (
+              <div key={row.label} className="flex items-center gap-3">
+                <span className="w-5 text-[11px] font-bold text-slate-400 text-right shrink-0">
+                  {row.label}
+                </span>
+                <div
+                  className="grid gap-2"
+                  style={{
+                    gridTemplateColumns: `repeat(${maxCols || 1}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {row.cells.map((cell, index) => {
+                    if (!cell || isAisleCell(cell)) {
+                      return (
+                        <div
+                          key={`${row.label}-empty-${index}`}
+                          className="h-7 w-7"
+                          aria-hidden="true"
+                        />
+                      );
+                    }
+
+                    const key = seatKey(cell.row, cell.col);
+                    const isSelected = selectedSeatKeys.has(key);
+                    const status = getSeatStatus(cell.status);
+                    const isMine = reservationSeatKeys.has(key);
+                    const displayStatus = isSelected ? "selected" : status;
+                    const isBookable = cell.isBookable !== false;
+                    const canSelect = status === "available" && isBookable;
+                    const isDisabled = !isSelected && !canSelect;
+                    const overrideMeta = resolveOverrideMeta(cell);
+                    const overrideLabel = overrideMeta
+                      ? `${overrideMeta.name || "Tarif fixe"}${
+                          overrideMeta.price !== null &&
+                          overrideMeta.price !== undefined
+                            ? ` (${formatPrice(overrideMeta.price)})`
+                            : ""
+                        }`
+                      : "";
+
                     return (
-                      <div
-                        key={`${row.label}-empty-${index}`}
-                        className="h-7 w-7"
-                        aria-hidden="true"
-                      />
+                      <button
+                        key={key}
+                        type="button"
+                        className={`transition-all duration-150 ${
+                          isDisabled ? "cursor-not-allowed opacity-60" : "hover:scale-110 hover:text-primary"
+                        }`}
+                        disabled={isDisabled}
+                        aria-label={`Siège ${row.label}${cell.col}`}
+                        title={
+                          overrideLabel
+                            ? `Siège ${row.label}${cell.col} - ${overrideLabel}`
+                            : `Siège ${row.label}${cell.col}`
+                        }
+                        aria-pressed={isSelected}
+                        onClick={() => onToggleSeat(cell)}
+                      >
+                        <SeatIcon status={displayStatus} isMine={isMine} />
+                      </button>
                     );
-                  }
-
-                  const key = seatKey(cell.row, cell.col);
-                  const isSelected = selectedSeatKeys.has(key);
-                  const status = getSeatStatus(cell.status);
-                  const isMine = reservationSeatKeys.has(key);
-                  const displayStatus = isSelected ? "selected" : status;
-                  const isBookable = cell.isBookable !== false;
-                  const canSelect = status === "available" && isBookable;
-                  const isDisabled = !isSelected && !canSelect;
-                  const overrideMeta = resolveOverrideMeta(cell);
-                  const overrideLabel = overrideMeta
-                    ? `${overrideMeta.name || "Tarif fixe"}${
-                        overrideMeta.price !== null &&
-                        overrideMeta.price !== undefined
-                          ? ` (${formatPrice(overrideMeta.price)})`
-                          : ""
-                      }`
-                    : "";
-
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      className={`transition ${
-                        isDisabled ? "cursor-not-allowed" : "hover:text-primary"
-                      }`}
-                      disabled={isDisabled}
-                      aria-label={`Siège ${row.label}${cell.col}`}
-                      title={
-                        overrideLabel
-                          ? `Siège ${row.label}${cell.col} - ${overrideLabel}`
-                          : `Siège ${row.label}${cell.col}`
-                      }
-                      aria-pressed={isSelected}
-                      onClick={() => onToggleSeat(cell)}
-                    >
-                      <SeatIcon status={displayStatus} isMine={isMine} />
-                    </button>
-                  );
-                })}
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-          {!seatRows.length && !isLoading ? (
-            <p className="text-xs text-slate-400 text-center">
-              Aucun plan de salle disponible.
-            </p>
-          ) : null}
-          {loadError ? (
-            <p className="text-xs text-amber-600 text-center">{loadError}</p>
-          ) : null}
+            ))}
+            {!seatRows.length && !isLoading ? (
+              <p className="text-xs text-slate-400 text-center">
+                Aucun plan de salle disponible.
+              </p>
+            ) : null}
+            {loadError ? (
+              <p className="text-xs text-amber-600 text-center">{loadError}</p>
+            ) : null}
+          </div>
         </div>
 
         <SeatLegend />

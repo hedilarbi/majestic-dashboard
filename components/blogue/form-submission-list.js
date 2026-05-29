@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FormExportButtons from "@/components/blogue/form-export-buttons";
 
 const formatDateTime = (value) => {
   if (!value) {
@@ -45,6 +46,9 @@ export default function FormSubmissionList({
             <p className="mt-2 text-sm text-slate-500">
               {form?.formDescription || "Consultez les soumissions recues pour ce formulaire."}
             </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <FormExportButtons formId={form?.id || form?._id || ""} />
           </div>
           <div className="grid gap-3 text-sm text-slate-500 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">

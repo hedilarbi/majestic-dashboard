@@ -8,7 +8,7 @@ export default async function BlogueTrailersPage() {
 
   if (!canManageBlogContent(user)) {
     return (
-      <DashboardAccessDenied message="Vous n'avez pas la permission de gerer les bandes-annonces du blogue." />
+      <DashboardAccessDenied message="Vous n'avez pas la permission de gérer les vidéos du blogue." />
     );
   }
 

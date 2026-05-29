@@ -31,10 +31,13 @@ export default function BlogContentFormModal({
   isSubmitting,
   imagePreview,
   thumbnailPreview,
+  albumPreviews = [],
   onInputChange,
   onTogglePublished,
   onImageChange,
   onThumbnailChange,
+  onAlbumImagesChange,
+  onAlbumImageRemove,
   onQuestionsChange,
   onContentHtmlChange,
   onClose,
@@ -120,9 +123,50 @@ export default function BlogContentFormModal({
                     onChange={onImageChange}
                   />
                 </label>
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Format recommandé : 1280 × 720 px (16:9)
+                </p>
                 <div className="mt-3">
                   <PreviewImage src={imagePreview} alt="Apercu de l'article" />
                 </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Album photo{" "}
+                  <span className="font-normal text-slate-400">(optionnel)</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 transition hover:border-primary/30 hover:bg-primary/5">
+                  <Icon name="upload" className="h-5 w-5 text-primary" />
+                  <span>Ajouter des photos à l&apos;album</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="sr-only"
+                    onChange={onAlbumImagesChange}
+                  />
+                </label>
+                <p className="mt-1.5 text-xs text-slate-400">
+                  10 photos maximum. Format recommandé : 1280 × 720 px (16:9)
+                </p>
+                {albumPreviews.length > 0 ? (
+                  <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {albumPreviews.map((src, index) => (
+                      <div key={index} className="group relative aspect-video overflow-hidden rounded-xl">
+                        <Image src={src} alt={`Photo ${index + 1}`} fill className="object-cover" unoptimized />
+                        <button
+                          type="button"
+                          onClick={() => onAlbumImageRemove(index)}
+                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition group-hover:opacity-100"
+                          aria-label="Supprimer cette photo"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               <div>
@@ -182,6 +226,31 @@ export default function BlogContentFormModal({
             <div className="space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Bannière{" "}
+                  <span className="font-normal text-slate-400">(optionnel)</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 transition hover:border-primary/30 hover:bg-primary/5">
+                  <Icon name="upload" className="h-5 w-5 text-primary" />
+                  <span>Importer une bannière</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={onImageChange}
+                  />
+                </label>
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Format recommandé : 1280 × 720 px (16:9)
+                </p>
+                {imagePreview ? (
+                  <div className="mt-3">
+                    <PreviewImage src={imagePreview} alt="Apercu de la bannière" />
+                  </div>
+                ) : null}
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
                   Description
                 </label>
                 <textarea
@@ -204,6 +273,75 @@ export default function BlogContentFormModal({
               </div>
             </div>
           ) : null}
+
+          {/* ── SEO ─────────────────────────────────────────────────── */}
+          <div className="space-y-4 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-indigo-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">
+                SEO
+              </span>
+              <p className="text-xs text-slate-500">
+                Titre et description affichés dans les moteurs de recherche
+              </p>
+            </div>
+
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="text-sm font-medium text-slate-700">
+                  Titre SEO
+                </label>
+                <span className={`text-xs font-semibold ${
+                  (formState.seoTitle?.length || 0) > 70
+                    ? "text-red-500"
+                    : (formState.seoTitle?.length || 0) > 55
+                    ? "text-amber-500"
+                    : "text-slate-400"
+                }`}>
+                  {formState.seoTitle?.length || 0}/70
+                </span>
+              </div>
+              <input
+                name="seoTitle"
+                type="text"
+                value={formState.seoTitle || ""}
+                onChange={onInputChange}
+                className={INPUT_CLASSES}
+                placeholder={`${formState.title || "Titre de la page"} | Majestic`}
+                maxLength={120}
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Laissez vide pour utiliser le titre du contenu par défaut.
+              </p>
+            </div>
+
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="text-sm font-medium text-slate-700">
+                  Description SEO
+                </label>
+                <span className={`text-xs font-semibold ${
+                  (formState.seoDescription?.length || 0) > 160
+                    ? "text-red-500"
+                    : (formState.seoDescription?.length || 0) > 130
+                    ? "text-amber-500"
+                    : "text-slate-400"
+                }`}>
+                  {formState.seoDescription?.length || 0}/160
+                </span>
+              </div>
+              <textarea
+                name="seoDescription"
+                value={formState.seoDescription || ""}
+                onChange={onInputChange}
+                className={`${TEXTAREA_CLASSES} min-h-20`}
+                placeholder="Courte description qui apparaît sous le titre dans les résultats de recherche."
+                maxLength={320}
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Laissez vide pour utiliser l&apos;accroche du contenu par défaut.
+              </p>
+            </div>
+          </div>
 
           {formError ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import DashboardAccessDenied from "@/components/dashboard/access-denied";
 import FormSubmissionList from "@/components/blogue/form-submission-list";
+import FormStatsPanel from "@/components/blogue/form-stats-panel";
 import { canAccessBlogFormSubmissions, getBlogUser } from "@/services/blog-auth";
 import { getBlogFormSubmissions } from "@/services/blog-form-submissions";
 
@@ -32,7 +33,12 @@ export default async function BlogFormSubmissionListPage({ params }) {
         </div>
       ) : null}
 
-      {form ? <FormSubmissionList form={form} items={items} /> : null}
+      {form ? (
+        <>
+          <FormStatsPanel formId={formId} />
+          <FormSubmissionList form={form} items={items} />
+        </>
+      ) : null}
     </div>
   );
 }

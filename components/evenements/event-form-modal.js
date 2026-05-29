@@ -135,7 +135,7 @@ export default function EventFormModal({
                             <p className="text-slate-500 text-xs mt-1">
                               JPG, PNG ou WEBP (max 5 MB)
                               <br />
-                              Format recommandé : 2:3
+                              Format recommandé : 800 × 1200 px (2:3)
                             </p>
                           </div>
                         </div>
