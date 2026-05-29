@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import GuichetHistoriquePrintAction from "@/components/guichet/GuichetHistoriquePrintAction";
 import { Icon } from "@/components/ui/icons";
 import { formatDate, formatDateTime, formatPrice } from "@/lib/configurations/formatters";
 import { getGuichetHistory } from "@/services/guichet-history";
@@ -222,18 +223,24 @@ export default async function GuichetHistoriquePage({ searchParams }) {
                       {formatDateTime(booking.createdAt)}
                     </td>
                     <td className="px-6 py-4">
-                      {booking.actionHref ? (
-                        <Link
-                          href={booking.actionHref}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-primary"
-                          aria-label="Voir le détail du booking"
-                          title="Voir le detail"
-                        >
-                          <Icon name="eye" className="h-4 w-4" />
-                        </Link>
-                      ) : (
-                        <span className="text-slate-300">-</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {booking.type === "ticket" && booking.id ? (
+                          <GuichetHistoriquePrintAction
+                            bookingId={booking.id}
+                            printCount={booking.printCount ?? 0}
+                          />
+                        ) : null}
+                        {booking.actionHref ? (
+                          <Link
+                            href={booking.actionHref}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-primary"
+                            aria-label="Voir le détail du booking"
+                            title="Voir le detail"
+                          >
+                            <Icon name="eye" className="h-4 w-4" />
+                          </Link>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))

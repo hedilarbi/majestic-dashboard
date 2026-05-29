@@ -37,6 +37,7 @@ const normalizeBookingHistoryItem = (booking) => ({
     : null,
   quantityLabel: `${Number(booking?.seatsCount) || 0} place(s)`,
   totalAmount: Number(booking?.totalAmount) || 0,
+  printCount: Number.isFinite(booking?.printCount) ? booking.printCount : 0,
   createdAt: booking?.createdAt || null,
   actionHref: booking?.id ? `/guichet/historique/${booking.id}` : "",
 });
