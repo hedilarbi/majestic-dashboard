@@ -2,12 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-const getCookie = (name) => {
-  if (typeof document === "undefined") return "";
-  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-  return match ? decodeURIComponent(match[2]) : "";
-};
-
 const BAR_COLORS = [
   "bg-primary",
   "bg-accent/70",
@@ -47,11 +41,7 @@ export default function FormStatsPanel({ formId }) {
 
   useEffect(() => {
     if (!formId) return;
-    const token = getCookie("auth_token");
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
-    fetch(`${baseUrl}/blog-form-submissions/forms/${formId}/stats`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    fetch(`/api/blogue/forms/${formId}/stats`)
       .then((r) => r.json())
       .then((data) => {
         if (data?.totalCount !== undefined) setStats(data);

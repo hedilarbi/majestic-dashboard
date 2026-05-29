@@ -2,12 +2,6 @@
 
 import { useState } from "react";
 
-const getCookie = (name) => {
-  if (typeof document === "undefined") return "";
-  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-  return match ? decodeURIComponent(match[2]) : "";
-};
-
 const downloadBlob = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -30,13 +24,8 @@ export default function FormExportButtons({ formId }) {
     setError("");
 
     try {
-      const token = getCookie("auth_token");
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
       const response = await fetch(
-        `${baseUrl}/blog-form-submissions/forms/${formId}/submissions/export/${format}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
+        `/api/blogue/forms/${formId}/export/${format}`,
       );
 
       if (!response.ok) {
