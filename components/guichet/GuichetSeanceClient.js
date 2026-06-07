@@ -1105,15 +1105,15 @@ export default function GuichetSeanceClient({ seanceId, socketUrl: socketUrlProp
           type="button"
           onClick={handleBackClick}
           disabled={isLeaving || isCancelling}
-          className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition ${
+          className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-sm transition ${
           isLeaving || isCancelling ?
           "cursor-not-allowed opacity-70" :
-          "hover:bg-slate-50"}`
+          "hover:bg-primary/90"}`
           }
           aria-label="Retour aux séances">
 
           {isLeaving ?
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" /> :
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-transparent" /> :
 
           <Icon name="chevronLeft" className="h-4 w-4" />
           }

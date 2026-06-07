@@ -15,6 +15,8 @@ export default function CashRegisterCloseAction({
   pendingAmount = 0,
   pendingTickets = 0,
   pendingSubscriptionSales = 0,
+  periodStartAt = "",
+  periodLabel = "",
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
@@ -27,7 +29,7 @@ export default function CashRegisterCloseAction({
     setIsSubmitting(true);
 
     try {
-      const result = await closeTicketOfficeRegister(staffId);
+      const result = await closeTicketOfficeRegister(staffId, { periodStartAt });
 
       if (!result?.ok) {
         setErrorMessage(result?.message || "Clôture impossible.");
@@ -59,7 +61,7 @@ export default function CashRegisterCloseAction({
         disabled={disabled || isSubmitting}
         className="inline-flex w-full items-center justify-center rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isSubmitting ? "Clôture..." : "Fermer la caisse"}
+        {isSubmitting ? "Clôture..." : periodLabel ? "Clôturer la feuille" : "Fermer la caisse"}
       </button>
 
       {errorMessage ? (
@@ -71,7 +73,7 @@ export default function CashRegisterCloseAction({
       {isOpen ? (
         <ConfirmModal
           title="Fermer la caisse"
-          description={`Cette action transfère ${formatPrice(pendingAmount)}, ${pendingTickets} billet(s) et ${pendingSubscriptionSales} abonnement(s) dans la caisse du caissier.`}
+          description={`Cette action transfère ${formatPrice(pendingAmount)}, ${pendingTickets} billet(s) et ${pendingSubscriptionSales} abonnement(s)${periodLabel ? ` pour ${periodLabel}` : ""} dans la caisse du caissier.`}
           confirmLabel={isSubmitting ? "Clôture..." : "Confirmer"}
           isLoading={isSubmitting}
           onConfirm={handleConfirm}

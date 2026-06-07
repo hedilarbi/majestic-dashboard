@@ -1,4 +1,5 @@
 import DashboardAccessDenied from "@/components/dashboard/access-denied";
+import ExportButtons from "@/components/dashboard/export-buttons";
 import {
   formatDate,
   formatDateTime,
@@ -7,6 +8,24 @@ import {
 import { getTicketStatusMeta } from "@/lib/configurations/ticket-status";
 import { canAccessDashboardPermission } from "@/services/dashboard-auth";
 import { getSalesTickets } from "@/services/sales";
+
+const parseSearchParam = (value) => {
+  if (Array.isArray(value)) {
+    return value[0] || "";
+  }
+
+  return typeof value === "string" ? value : "";
+};
+
+const buildQueryString = (filters) => {
+  const query = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      query.set(key, value);
+    }
+  });
+  return query.toString();
+};
 
 const formatSeat = (seat) => {
   if (!seat) {
@@ -43,7 +62,7 @@ const formatSessionLabel = (session) => {
   return `${eventName} • ${dateLabel}${timeLabel ? ` ${timeLabel}` : ""}`;
 };
 
-export default async function BilletsPage() {
+export default async function BilletsPage({ searchParams }) {
   const canList = await canAccessDashboardPermission("sales_tickets", "list");
 
   if (!canList) {
@@ -52,16 +71,70 @@ export default async function BilletsPage() {
     );
   }
 
-  const { items, error } = await getSalesTickets({ limit: 200 });
+  const resolvedParams = await searchParams;
+  const filters = {
+    dateFrom: parseSearchParam(resolvedParams?.dateFrom),
+    dateTo: parseSearchParam(resolvedParams?.dateTo),
+    status: parseSearchParam(resolvedParams?.status),
+    pricingName: parseSearchParam(resolvedParams?.pricingName),
+  };
+  const exportQueryString = buildQueryString(filters);
+  const { items, error } = await getSalesTickets({ limit: 200, ...filters });
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-slate-900">Billets</h1>
-        <p className="text-sm text-slate-500">
-          Liste des tickets crees apres chaque booking.
-        </p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold text-slate-900">Billets</h1>
+          <p className="text-sm text-slate-500">
+            Liste des tickets crees apres chaque booking.
+          </p>
+        </div>
+        <ExportButtons resource="billets" queryString={exportQueryString} />
       </div>
+
+      <form
+        method="GET"
+        className="grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-5"
+      >
+        <input
+          type="date"
+          name="dateFrom"
+          defaultValue={filters.dateFrom}
+          className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          aria-label="Date début"
+        />
+        <input
+          type="date"
+          name="dateTo"
+          defaultValue={filters.dateTo}
+          className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          aria-label="Date fin"
+        />
+        <select
+          name="status"
+          defaultValue={filters.status}
+          className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="">Tous les statuts</option>
+          <option value="active">Actif</option>
+          <option value="scanned">Scanné</option>
+          <option value="cancelled">Annulé</option>
+        </select>
+        <input
+          type="search"
+          name="pricingName"
+          defaultValue={filters.pricingName}
+          placeholder="Tarif"
+          className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        <button
+          type="submit"
+          className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
+        >
+          Filtrer
+        </button>
+      </form>
 
       {error ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">

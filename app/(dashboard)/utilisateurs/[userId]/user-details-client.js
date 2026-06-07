@@ -9,13 +9,13 @@ export default function UserDetailsClient({ user, bookings = [], subscriptions =
       <div className="flex items-center gap-4">
         <Link 
           href="/utilisateurs" 
-          className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition shadow-sm"
+          className="p-2 rounded-xl border border-primary bg-primary text-white hover:bg-primary/90 transition shadow-sm"
         >
           <Icon name="chevronLeft" className="h-5 w-5" />
         </Link>
         <div>
           <h1 className="font-secondary text-2xl font-semibold text-slate-900 tracking-tight">
-            Détails de l'utilisateur
+            Détails de l&apos;utilisateur
           </h1>
           <p className="text-slate-500 text-sm">
             Fiche complète de {user.firstName} {user.lastName}

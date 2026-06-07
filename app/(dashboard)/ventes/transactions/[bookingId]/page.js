@@ -136,7 +136,7 @@ export default async function TransactionDetailsPage({ params }) {
       <div className="max-w-6xl mx-auto space-y-6">
         <Link
           href="/ventes/transactions"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-sm transition hover:bg-primary/90"
           aria-label="Retour aux transactions"
         >
           <Icon name="chevronLeft" className="h-4 w-4" />
@@ -157,7 +157,7 @@ export default async function TransactionDetailsPage({ params }) {
       <div className="flex items-start gap-3">
         <Link
           href="/ventes/transactions"
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-sm transition hover:bg-primary/90"
           aria-label="Retour aux transactions"
         >
           <Icon name="chevronLeft" className="h-4 w-4" />

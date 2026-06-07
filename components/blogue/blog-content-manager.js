@@ -80,6 +80,7 @@ export default function BlogContentManager({
   type,
   initialItems = [],
   initialError = "",
+  permissions = {},
 }) {
   const router = useRouter();
   const { toast, showToast } = useToast();
@@ -96,6 +97,10 @@ export default function BlogContentManager({
   const [imagePreview, setImagePreview] = useState("");
   const [thumbnailPreview, setThumbnailPreview] = useState("");
   const [albumPreviews, setAlbumPreviews] = useState([]);
+  const canCreate = permissions.canCreate !== false;
+  const canUpdate = permissions.canUpdate !== false;
+  const canDelete = permissions.canDelete !== false;
+  const canShowActions = canUpdate || canDelete;
 
   useEffect(() => {
     setItems(initialItems);
@@ -123,11 +128,19 @@ export default function BlogContentManager({
   };
 
   const openCreateModal = () => {
+    if (!canCreate) {
+      return;
+    }
+
     resetForm();
     setIsCreateOpen(true);
   };
 
   const openEditModal = (item) => {
+    if (!canUpdate) {
+      return;
+    }
+
     const normalized = normalizeBlogContent(item);
     setEditingItem(normalized);
     setFormState(buildFormStateFromItem(type, normalized));
@@ -221,6 +234,12 @@ export default function BlogContentManager({
         payload.set("image", formState.image);
       }
 
+      if (formState.thumbnailFile) {
+        payload.set("thumbnail", formState.thumbnailFile);
+      } else if (formState.thumbnail) {
+        payload.set("thumbnail", formState.thumbnail);
+      }
+
       (formState.images || []).forEach((url) => payload.append("images", url));
       (formState.imageFiles || []).forEach((file) => payload.append("images", file));
     }
@@ -243,6 +262,12 @@ export default function BlogContentManager({
         payload.set("image", formState.imageFile);
       } else if (formState.image) {
         payload.set("image", formState.image);
+      }
+
+      if (formState.thumbnailFile) {
+        payload.set("thumbnail", formState.thumbnailFile);
+      } else if (formState.thumbnail) {
+        payload.set("thumbnail", formState.thumbnail);
       }
     }
 
@@ -297,6 +322,16 @@ export default function BlogContentManager({
 
     try {
       const payload = buildPayload();
+      if (editingItem && !canUpdate) {
+        setFormError("Vous n'avez pas la permission de modifier ce contenu.");
+        return;
+      }
+
+      if (!editingItem && !canCreate) {
+        setFormError("Vous n'avez pas la permission de créer ce contenu.");
+        return;
+      }
+
       const result = editingItem
         ? await updateBlogContent(editingItem.id, payload)
         : await createBlogContent(payload);
@@ -329,8 +364,19 @@ export default function BlogContentManager({
           : `${typeMeta.singular} créé avec succès.`,
         "success",
       );
-    } catch (_error) {
-      setFormError("Une erreur est survenue. Merci de réessayer.");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message.toLowerCase() : "";
+      const isUploadTooLarge =
+        errorMessage.includes("body exceeded") ||
+        errorMessage.includes("payload too large") ||
+        errorMessage.includes("request entity too large");
+
+      setFormError(
+        isUploadTooLarge
+          ? "Les images sont trop volumineuses. Réduisez leur taille puis réessayez."
+          : "Une erreur est survenue. Merci de réessayer.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -338,6 +384,11 @@ export default function BlogContentManager({
 
   const handleDelete = async () => {
     if (!pendingDelete?.id) {
+      return;
+    }
+
+    if (!canDelete) {
+      showToast("Vous n'avez pas la permission de supprimer ce contenu.", "error");
       return;
     }
 
@@ -376,14 +427,16 @@ export default function BlogContentManager({
             Liste, création, modification et suppression des {typeMeta.label.toLowerCase()}.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary/90"
-        >
-          <Icon name="plus" className="h-4 w-4" />
-          Nouveau {typeMeta.singular}
-        </button>
+        {canCreate ? (
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary/90"
+          >
+            <Icon name="plus" className="h-4 w-4" />
+            Nouveau {typeMeta.singular}
+          </button>
+        ) : null}
       </div>
 
       {errorMessage ? (
@@ -409,9 +462,11 @@ export default function BlogContentManager({
                 <th className="px-6 py-4 text-left font-semibold text-slate-700">
                   Mise à jour
                 </th>
-                <th className="px-6 py-4 text-right font-semibold text-slate-700">
-                  Actions
-                </th>
+                {canShowActions ? (
+                  <th className="px-6 py-4 text-right font-semibold text-slate-700">
+                    Actions
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -450,32 +505,38 @@ export default function BlogContentManager({
                         </div>
                       ) : null}
                     </td>
-                    <td className="px-6 py-4 align-top">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(item)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
-                        >
-                          <Icon name="pen" className="h-4 w-4" />
-                          Modifier
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPendingDelete(item)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                        >
-                          <Icon name="trash" className="h-4 w-4" />
-                          Supprimer
-                        </button>
-                      </div>
-                    </td>
+                    {canShowActions ? (
+                      <td className="px-6 py-4 align-top">
+                        <div className="flex justify-end gap-2">
+                          {canUpdate ? (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(item)}
+                              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                            >
+                              <Icon name="pen" className="h-4 w-4" />
+                              Modifier
+                            </button>
+                          ) : null}
+                          {canDelete ? (
+                            <button
+                              type="button"
+                              onClick={() => setPendingDelete(item)}
+                              className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                            >
+                              <Icon name="trash" className="h-4 w-4" />
+                              Supprimer
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={canShowActions ? 5 : 4}
                     className="px-6 py-12 text-center text-sm text-slate-500"
                   >
                     {typeMeta.emptyMessage}

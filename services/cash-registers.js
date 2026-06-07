@@ -113,6 +113,9 @@ export const getCashierTicketOfficeDetails = async (staffId) => {
         lastTransactionAt: null
       },
       lastClosure: data?.lastClosure || null,
+      pendingPeriods: Array.isArray(data?.pendingPeriods) ?
+      data.pendingPeriods :
+      [],
       transactions: Array.isArray(data?.transactions) ? data.transactions : [],
       subscriptionSales: Array.isArray(data?.subscriptionSales) ?
       data.subscriptionSales :
@@ -157,6 +160,9 @@ export const getTicketOfficeOwnRegisterDetails = async () => {
         lastTransactionAt: null
       },
       lastClosure: data?.lastClosure || null,
+      pendingPeriods: Array.isArray(data?.pendingPeriods) ?
+      data.pendingPeriods :
+      [],
       transactions: Array.isArray(data?.transactions) ? data.transactions : [],
       subscriptionSales: Array.isArray(data?.subscriptionSales) ?
       data.subscriptionSales :
@@ -214,6 +220,51 @@ export const getSupervisorCashierDetails = async (cashierId) => {
       data.subscriptionSales :
       []
     },
+    message: ""
+  };
+};
+
+export const getSupervisorCashierClosureHistory = async ({
+  limit = 200,
+  dateFrom = "",
+  dateTo = "",
+} = {}) => {
+  const auth = await getAuthContext();
+
+  if (!auth.ok) {
+    return { ok: false, items: [], message: auth.message };
+  }
+
+  const query = new URLSearchParams();
+  query.set("limit", String(limit));
+  if (dateFrom) {
+    query.set("dateFrom", dateFrom);
+  }
+  if (dateTo) {
+    query.set("dateTo", dateTo);
+  }
+
+  const response = await fetch(
+    `${auth.baseUrl}/cash-registers/cashiers/history?${query.toString()}`,
+    {
+      headers: { Authorization: `Bearer ${auth.token}` },
+      cache: "no-store"
+    }
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      items: [],
+      message: extractMessage(data, "Impossible de charger l'historique des caisses.")
+    };
+  }
+
+  return {
+    ok: true,
+    items: Array.isArray(data?.items) ? data.items : [],
     message: ""
   };
 };

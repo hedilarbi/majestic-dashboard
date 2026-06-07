@@ -63,7 +63,7 @@ export default async function ReservationRequestDetailsPage({ params }) {
       <div className="mx-auto max-w-4xl space-y-6">
         <Link
           href="/demandes-reservation"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-sm transition hover:bg-primary/90"
           aria-label="Retour"
         >
           <Icon name="chevronLeft" className="h-4 w-4" />
@@ -82,7 +82,7 @@ export default async function ReservationRequestDetailsPage({ params }) {
       <div className="flex items-start gap-3">
         <Link
           href="/demandes-reservation"
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-sm transition hover:bg-primary/90"
           aria-label="Retour"
         >
           <Icon name="chevronLeft" className="h-4 w-4" />

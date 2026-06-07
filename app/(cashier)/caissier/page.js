@@ -65,6 +65,9 @@ export default async function CashierOverviewPage() {
                   Transactions
                 </th>
                 <th className="px-6 py-4 text-left font-semibold">
+                  Feuilles
+                </th>
+                <th className="px-6 py-4 text-left font-semibold">
                   Dernière clôture
                 </th>
                 <th className="px-6 py-4 text-left font-semibold">Action</th>
@@ -73,7 +76,7 @@ export default async function CashierOverviewPage() {
             <tbody className="divide-y divide-slate-200 text-slate-600">
               {ticketOffices.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8">
+                  <td colSpan={7} className="px-6 py-8">
                     Aucun guichet trouvé.
                   </td>
                 </tr>
@@ -107,18 +110,28 @@ export default async function CashierOverviewPage() {
                     <td className="px-6 py-4 font-semibold text-slate-900">
                       {formatPrice(item?.currentBalance?.amount || 0)}
                     </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        {item?.currentBalance?.bookingCount || 0} vente(s) billets
+	                    <td className="px-6 py-4">
+	                      <div>
+	                        {item?.currentBalance?.bookingCount || 0} vente(s) billets
                       </div>
                       <div className="text-xs text-slate-500">
                         {item?.currentBalance?.ticketCount || 0} billet(s)
                       </div>
                       <div className="text-xs text-slate-500">
-                        {item?.currentBalance?.subscriptionSaleCount || 0} abonnement(s)
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
+	                        {item?.currentBalance?.subscriptionSaleCount || 0} abonnement(s)
+	                      </div>
+	                    </td>
+	                    <td className="px-6 py-4">
+	                      <div className="font-semibold text-slate-900">
+	                        {item?.currentBalance?.pendingPeriodCount || 0}
+	                      </div>
+	                      {item?.currentBalance?.oldestPendingPeriodAt ? (
+	                        <div className="text-xs text-slate-500">
+	                          Depuis {formatDateTime(item.currentBalance.oldestPendingPeriodAt)}
+	                        </div>
+	                      ) : null}
+	                    </td>
+	                    <td className="px-6 py-4">
                       {item?.lastClosure ? (
                         <div>
                           <div>{formatDateTime(item.lastClosure.closedAt)}</div>

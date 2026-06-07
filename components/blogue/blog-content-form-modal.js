@@ -133,6 +133,32 @@ export default function BlogContentFormModal({
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Image miniature{" "}
+                  <span className="font-normal text-slate-400">(optionnel)</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 transition hover:border-primary/30 hover:bg-primary/5">
+                  <Icon name="upload" className="h-5 w-5 text-primary" />
+                  <span>Importer la miniature</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={onThumbnailChange}
+                  />
+                </label>
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Format recommandé : 640 × 360 px (16:9)
+                </p>
+                <div className="mt-3">
+                  <PreviewImage
+                    src={thumbnailPreview}
+                    alt="Apercu de la miniature"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
                   Album photo{" "}
                   <span className="font-normal text-slate-400">(optionnel)</span>
                 </label>
@@ -245,6 +271,34 @@ export default function BlogContentFormModal({
                 {imagePreview ? (
                   <div className="mt-3">
                     <PreviewImage src={imagePreview} alt="Apercu de la bannière" />
+                  </div>
+                ) : null}
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Image miniature{" "}
+                  <span className="font-normal text-slate-400">(optionnel)</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 transition hover:border-primary/30 hover:bg-primary/5">
+                  <Icon name="upload" className="h-5 w-5 text-primary" />
+                  <span>Importer la miniature</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={onThumbnailChange}
+                  />
+                </label>
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Format recommandé : 640 × 360 px (16:9)
+                </p>
+                {thumbnailPreview ? (
+                  <div className="mt-3">
+                    <PreviewImage
+                      src={thumbnailPreview}
+                      alt="Apercu de la miniature"
+                    />
                   </div>
                 ) : null}
               </div>

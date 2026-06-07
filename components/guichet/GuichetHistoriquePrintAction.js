@@ -28,6 +28,31 @@ const buildQrSrc = (ticket) => {
   return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(value)}`;
 };
 
+const PRINT_RENDER_DELAY_MS = 120;
+const PRINT_CANCEL_THRESHOLD_MS = 500;
+const PRINT_FALLBACK_MS = 30_000;
+
+const postPrintTracking = async ({ bookingId, ticketId, cancelled = false }) => {
+  const endpoint = cancelled ? "print-cancelled" : "print";
+  const response = await fetch(`/api/guichet/bookings/${bookingId}/${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticketId }),
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ||
+        (cancelled
+          ? "Impossible d'enregistrer l'annulation d'impression."
+          : "Impossible d'enregistrer l'impression."),
+    );
+  }
+
+  return data;
+};
+
 function TicketCard({ ticket, booking }) {
   const session = booking?.session || {};
   const eventName = session?.event?.name || "Le Majestic";
@@ -70,7 +95,120 @@ function TicketCard({ ticket, booking }) {
       {booking?.bookingNumber ? (
         <p className="mt-1 text-center text-[10px] text-slate-500">{booking.bookingNumber}</p>
       ) : null}
+      <p className="mt-2 text-center text-[9px] italic text-slate-400">
+        Votre présence fait vivre le Majestic. Bon spectacle !
+      </p>
     </article>
+  );
+}
+
+export function GuichetTicketPrintAction({
+  booking,
+  ticket,
+  canPrint = true,
+  disabledReason = "",
+}) {
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [error, setError] = useState("");
+  const printFallbackRef = useRef(null);
+  const bookingId = booking?.id || "";
+  const ticketId = ticket?.id || "";
+  const isDisabled = isPrinting || !canPrint || !bookingId || !ticketId;
+  const title =
+    disabledReason ||
+    (!bookingId || !ticketId ? "Billet indisponible" : "Imprimer ce billet");
+
+  const handlePrint = useCallback(() => {
+    if (isDisabled || typeof window === "undefined") {
+      return;
+    }
+
+    setError("");
+    setIsPrinting(true);
+
+    let handled = false;
+    let dialogOpenedAt = Date.now();
+    let handleAfterPrint;
+
+    const cleanup = () => {
+      if (printFallbackRef.current) {
+        clearTimeout(printFallbackRef.current);
+        printFallbackRef.current = null;
+      }
+      if (handleAfterPrint) {
+        window.removeEventListener("afterprint", handleAfterPrint);
+      }
+      setIsPrinting(false);
+    };
+
+    const finishPrint = async (cancelled) => {
+      try {
+        await postPrintTracking({ bookingId, ticketId, cancelled });
+      } catch (trackingError) {
+        setError(
+          trackingError?.message ||
+            "Impossible d'enregistrer le suivi d'impression.",
+        );
+      } finally {
+        cleanup();
+      }
+    };
+
+    handleAfterPrint = () => {
+      if (handled) {
+        return;
+      }
+
+      handled = true;
+      const elapsed = Date.now() - dialogOpenedAt;
+      const likelyCancelled = elapsed < PRINT_CANCEL_THRESHOLD_MS;
+      void finishPrint(likelyCancelled);
+    };
+
+    window.setTimeout(() => {
+      dialogOpenedAt = Date.now();
+      window.addEventListener("afterprint", handleAfterPrint);
+      printFallbackRef.current = window.setTimeout(() => {
+        if (handled) {
+          return;
+        }
+        handled = true;
+        setError("Impression non confirmée.");
+        cleanup();
+      }, PRINT_FALLBACK_MS);
+      window.print();
+    }, PRINT_RENDER_DELAY_MS);
+  }, [bookingId, isDisabled, ticketId]);
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      {isPrinting ? (
+        <div className="guichet-print-root hidden">
+          <div className="ticket-print-grid">
+            <TicketCard ticket={ticket} booking={booking} />
+          </div>
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={handlePrint}
+        disabled={isDisabled}
+        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
+        title={title}
+      >
+        <RiPrinterLine className="h-4 w-4" />
+        {isPrinting ? "Impression..." : "Imprimer"}
+      </button>
+      {disabledReason ? (
+        <span className="text-[10px] font-semibold text-slate-400">
+          {disabledReason}
+        </span>
+      ) : null}
+      {error ? (
+        <span className="text-[10px] font-semibold text-red-500">{error}</span>
+      ) : null}
+    </div>
   );
 }
 

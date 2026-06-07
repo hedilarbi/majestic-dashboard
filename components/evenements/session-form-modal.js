@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Icon } from "@/components/ui/icons";
 import {
@@ -374,6 +374,9 @@ export default function SessionFormModal({
 
     return availableVersions[0] || "";
   });
+  const [selectedSessionType, setSelectedSessionType] = useState(
+    isEditing ? (session?.sessionType || "normale") : "normale"
+  );
   const [selectedTimeIds, setSelectedTimeIds] = useState(() =>
     isEditing ? resolveTimeIds(session?.sessionTime, false) : resolveTimeIds()
   );
@@ -402,6 +405,8 @@ export default function SessionFormModal({
   });
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [occupiedTimes, setOccupiedTimes] = useState(new Set());
+  const occupiedAbortRef = useRef(null);
 
   useEffect(() => {
     if (isEditing) {
@@ -417,6 +422,30 @@ export default function SessionFormModal({
       setSelectedVersion(availableVersions[0] || "");
     }
   }, [availableVersions, isEditing, selectedVersion]);
+
+  // Load occupied time slots when date changes
+  useEffect(() => {
+    if (!selectedDate) {
+      setOccupiedTimes(new Set());
+      return;
+    }
+
+    if (occupiedAbortRef.current) occupiedAbortRef.current.abort();
+    const controller = new AbortController();
+    occupiedAbortRef.current = controller;
+
+    fetch(`/api/sessions/by-date?date=${encodeURIComponent(selectedDate)}`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        const times = Array.isArray(data?.occupiedTimes) ? data.occupiedTimes : [];
+        // In edit mode, exclude the current session's own time from occupied set
+        const currentTime = isEditing && session?.sessionTime ? session.sessionTime : null;
+        setOccupiedTimes(new Set(times.filter((t) => t !== currentTime)));
+      })
+      .catch(() => {});
+
+    return () => controller.abort();
+  }, [selectedDate, isEditing, session?.sessionTime]);
 
   const selectedRoom = useMemo(() => {
     if (!Array.isArray(rooms) || rooms.length === 0) {
@@ -489,6 +518,28 @@ export default function SessionFormModal({
     if (!selectedDate) {
       setFormError("Veuillez choisir une date.");
       return;
+    }
+
+    // Validate session date is within event availability window
+    if (targetEvent.availableFrom || targetEvent.availableTo) {
+      const sessionDate = new Date(selectedDate);
+      sessionDate.setHours(12, 0, 0, 0); // normalize to noon to avoid timezone issues
+      if (targetEvent.availableFrom) {
+        const from = new Date(targetEvent.availableFrom);
+        from.setHours(0, 0, 0, 0);
+        if (sessionDate < from) {
+          setFormError(`La date de séance est avant la date de disponibilité de l'événement (${from.toLocaleDateString("fr-FR")}).`);
+          return;
+        }
+      }
+      if (targetEvent.availableTo) {
+        const to = new Date(targetEvent.availableTo);
+        to.setHours(23, 59, 59, 999);
+        if (sessionDate > to) {
+          setFormError(`La date de séance est après la fin de disponibilité de l'événement (${to.toLocaleDateString("fr-FR")}).`);
+          return;
+        }
+      }
     }
 
     if (!selectedVersion) {
@@ -597,6 +648,7 @@ export default function SessionFormModal({
               overrides,
               pricingOverrides,
               pricingLimits,
+              sessionType: selectedSessionType,
             },
             targetEvent.id
           )
@@ -611,6 +663,7 @@ export default function SessionFormModal({
             overrides,
             pricingOverrides,
             pricingLimits,
+            sessionType: selectedSessionType,
           });
 
       if (!result.ok) {
@@ -847,6 +900,22 @@ export default function SessionFormModal({
 
               <div>
                 <label className="block text-sm font-medium text-slate-900 mb-2">
+                  Type de séance
+                </label>
+                <select
+                  value={selectedSessionType}
+                  onChange={(e) => setSelectedSessionType(e.target.value)}
+                  className={INPUT_CLASSES}
+                >
+                  <option value="normale">Séance normale</option>
+                  <option value="projection_debat">Projection-débat</option>
+                  <option value="avant_premiere">Avant-première</option>
+                  <option value="premiere">Première</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
                   {TEXT.sessionTime}
                 </label>
                 <p className="text-xs text-slate-500 mb-2">
@@ -858,30 +927,36 @@ export default function SessionFormModal({
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {sessionTimes.map((time) => {
                       const isActive = selectedTimeIds.includes(time.id);
+                      const isOccupied = occupiedTimes.has(time.time);
                       return (
                         <button
                           key={time.id}
                           type="button"
-                          onClick={() =>
+                          disabled={isOccupied}
+                          title={isOccupied ? "Créneau déjà occupé ce jour" : undefined}
+                          onClick={() => {
+                            if (isOccupied) return;
                             setSelectedTimeIds((prev) => {
                               if (isEditing) {
-                                return prev.includes(time.id)
-                                  ? prev
-                                  : [time.id];
+                                return prev.includes(time.id) ? prev : [time.id];
                               }
-
                               return prev.includes(time.id)
                                 ? prev.filter((id) => id !== time.id)
                                 : [...prev, time.id];
-                            })
-                          }
-                          className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                            isActive
+                            });
+                          }}
+                          className={`relative rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                            isOccupied
+                              ? "cursor-not-allowed border-amber-200 bg-amber-50 text-amber-600 opacity-80"
+                              : isActive
                               ? "border-primary bg-primary text-white shadow-sm"
                               : "border-slate-200 text-slate-600 hover:border-primary hover:text-primary"
                           }`}
                         >
                           {time.time}
+                          {isOccupied ? (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-amber-400 text-[7px] text-white font-bold">!</span>
+                          ) : null}
                         </button>
                       );
                     })}
@@ -889,6 +964,11 @@ export default function SessionFormModal({
                 ) : (
                   <p className="text-sm text-slate-500">{TEXT.noTimes}</p>
                 )}
+                {occupiedTimes.size > 0 ? (
+                  <p className="mt-2 text-xs text-amber-600">
+                    <span className="font-semibold">⚠</span> Les créneaux en orange ont déjà une séance programmée ce jour-là et ne peuvent pas être sélectionnés.
+                  </p>
+                ) : null}
               </div>
 
               <div>

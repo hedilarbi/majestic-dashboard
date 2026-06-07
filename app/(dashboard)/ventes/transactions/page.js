@@ -1,10 +1,29 @@
 import DashboardAccessDenied from "@/components/dashboard/access-denied";
 import Link from "next/link";
 
+import ExportButtons from "@/components/dashboard/export-buttons";
 import { Icon } from "@/components/ui/icons";
 import { formatDate, formatDateTime, formatPrice } from "@/lib/configurations/formatters";
 import { canAccessDashboardPermission } from "@/services/dashboard-auth";
 import { getSalesTransactions } from "@/services/sales";
+
+const parseSearchParam = (value) => {
+  if (Array.isArray(value)) {
+    return value[0] || "";
+  }
+
+  return typeof value === "string" ? value : "";
+};
+
+const buildQueryString = (filters) => {
+  const query = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      query.set(key, value);
+    }
+  });
+  return query.toString();
+};
 
 const formatSessionDateOnly = (value) => {
   if (!value) {
@@ -72,7 +91,7 @@ const formatBookingActor = (booking) => {
   return "-";
 };
 
-export default async function TransactionsPage() {
+export default async function TransactionsPage({ searchParams }) {
   const canList = await canAccessDashboardPermission(
     "sales_transactions",
     "list",
@@ -84,16 +103,101 @@ export default async function TransactionsPage() {
     );
   }
 
-  const { items, error } = await getSalesTransactions({ limit: 200 });
+  const resolvedParams = await searchParams;
+  const filters = {
+    dateFrom: parseSearchParam(resolvedParams?.dateFrom),
+    dateTo: parseSearchParam(resolvedParams?.dateTo),
+    paymentMethod: parseSearchParam(resolvedParams?.paymentMethod),
+    paymentStatus: parseSearchParam(resolvedParams?.paymentStatus),
+    bookingSource: parseSearchParam(resolvedParams?.bookingSource),
+    status: parseSearchParam(resolvedParams?.status),
+  };
+  const exportQueryString = buildQueryString(filters);
+  const { items, error } = await getSalesTransactions({ limit: 200, ...filters });
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-slate-900">Transactions</h1>
-        <p className="text-sm text-slate-500">
-          Derniers bookings enregistrés dans le système.
-        </p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold text-slate-900">Transactions</h1>
+          <p className="text-sm text-slate-500">
+            Derniers bookings enregistrés dans le système.
+          </p>
+        </div>
+        <ExportButtons resource="transactions" queryString={exportQueryString} />
       </div>
+
+      <form
+        method="GET"
+        className="grid grid-cols-1 gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-3 lg:grid-cols-6"
+      >
+        <input
+          type="date"
+          name="dateFrom"
+          defaultValue={filters.dateFrom}
+          className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          aria-label="Date début"
+        />
+        <input
+          type="date"
+          name="dateTo"
+          defaultValue={filters.dateTo}
+          className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          aria-label="Date fin"
+        />
+        <select
+          name="paymentMethod"
+          defaultValue={filters.paymentMethod}
+          className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="">Paiement</option>
+          <option value="online">En ligne</option>
+          <option value="cash">Espèces</option>
+          <option value="card">Carte</option>
+          <option value="subscription">Abonnement</option>
+        </select>
+        <select
+          name="paymentStatus"
+          defaultValue={filters.paymentStatus}
+          className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="">Statut paiement</option>
+          <option value="pending">En attente</option>
+          <option value="completed">Payé</option>
+          <option value="failed">Échoué</option>
+          <option value="refunded">Remboursé</option>
+        </select>
+        <select
+          name="bookingSource"
+          defaultValue={filters.bookingSource}
+          className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="">Source</option>
+          <option value="web">Web</option>
+          <option value="mobile">Mobile</option>
+          <option value="ticket_office">Guichet</option>
+        </select>
+        <div className="flex gap-2">
+          <select
+            name="status"
+            defaultValue={filters.status}
+            className="min-w-0 flex-1 rounded-xl border border-slate-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">Statut</option>
+            <option value="pending">En attente</option>
+            <option value="confirmed">Confirmé</option>
+            <option value="cancelled">Annulé</option>
+            <option value="used">Utilisé</option>
+            <option value="refunded">Remboursé</option>
+          </select>
+          <button
+            type="submit"
+            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary/90"
+          >
+            Filtrer
+          </button>
+        </div>
+      </form>
 
       {error ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">

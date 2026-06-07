@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import GuichetBookingCancelAction from "@/components/guichet/GuichetBookingCancelAction";
+import { GuichetTicketPrintAction } from "@/components/guichet/GuichetHistoriquePrintAction";
 import { Icon } from "@/components/ui/icons";
 import {
   formatDate,
@@ -45,9 +46,47 @@ const formatSeatLabel = (seat) => {
   return `${seat.row}${seat.col}`;
 };
 
-export default async function GuichetBookingDetailsPage({ params }) {
+const HISTORY_FILTER_KEYS = ["type", "dateFrom", "dateTo"];
+const TUNIS_TIME_ZONE = "Africa/Tunis";
+
+const buildHistoryBackHref = (searchParams) => {
+  const query = new URLSearchParams();
+
+  HISTORY_FILTER_KEYS.forEach((key) => {
+    const value = searchParams?.[key];
+    if (typeof value === "string" && value.trim()) {
+      query.set(key, value);
+    }
+  });
+
+  const queryString = query.toString();
+  return queryString ? `/guichet/historique?${queryString}` : "/guichet/historique";
+};
+
+const getTunisDateKey = (value) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TUNIS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const segments = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return `${segments.year}-${segments.month}-${segments.day}`;
+};
+
+const isSoldToday = (ticket, todayKey) => getTunisDateKey(ticket?.createdAt) === todayKey;
+
+export default async function GuichetBookingDetailsPage({ params, searchParams }) {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const bookingId = resolvedParams?.bookingId;
+  const backHref = buildHistoryBackHref(resolvedSearchParams);
 
   const { ok, booking, message } = await getGuichetBookingDetails(bookingId);
 
@@ -55,8 +94,8 @@ export default async function GuichetBookingDetailsPage({ params }) {
     return (
       <div className="max-w-6xl mx-auto space-y-6">
         <Link
-          href="/guichet/historique"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+          href={backHref}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-sm transition hover:bg-primary/90"
           aria-label="Retour a l'historique">
 
           <Icon name="chevronLeft" className="h-4 w-4" />
@@ -78,6 +117,7 @@ export default async function GuichetBookingDetailsPage({ params }) {
     const statusMeta = getTicketStatusMeta(ticket);
     return statusMeta.code !== "cancelled";
   });
+  const todayKey = getTunisDateKey(new Date());
   const canCancelEntireSale =
   cancellableTickets.length > 0 &&
   cancellableTickets.length === nonCancelledTickets.length;
@@ -86,8 +126,8 @@ export default async function GuichetBookingDetailsPage({ params }) {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-start gap-3">
         <Link
-          href="/guichet/historique"
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+          href={backHref}
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-sm transition hover:bg-primary/90"
           aria-label="Retour a l'historique">
 
           <Icon name="chevronLeft" className="h-4 w-4" />
@@ -185,6 +225,15 @@ export default async function GuichetBookingDetailsPage({ params }) {
 
               tickets.map((ticket) => {
                 const statusMeta = getTicketStatusMeta(ticket);
+                const ticketSoldToday = isSoldToday(ticket, todayKey);
+                const canPrintTicket =
+                  ticketSoldToday && statusMeta.code !== "cancelled";
+                const printDisabledReason =
+                  statusMeta.code === "cancelled"
+                    ? "Billet annulé"
+                    : ticketSoldToday
+                      ? ""
+                      : "Vente hors aujourd'hui";
 
                 return (
                   <tr key={ticket.id || ticket.code} className="hover:bg-slate-50">
@@ -220,17 +269,25 @@ export default async function GuichetBookingDetailsPage({ params }) {
                         {formatDateTime(ticket.createdAt)}
                       </td>
                       <td className="px-6 py-4">
-                        {statusMeta.code === "not_scanned" ?
-                      <GuichetBookingCancelAction
-                        bookingId={booking.id}
-                        ticketIds={[ticket.id]}
-                        label="Annuler"
-                        description={`Cette action annule le billet ${ticket.code || ""} (${formatSeatLabel(ticket.seat)}).`}
-                        className="inline-flex items-center justify-center rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60" /> :
+                        <div className="flex flex-wrap items-start gap-2">
+                          <GuichetTicketPrintAction
+                            booking={booking}
+                            ticket={ticket}
+                            canPrint={canPrintTicket}
+                            disabledReason={printDisabledReason}
+                          />
+                          {statusMeta.code === "not_scanned" ?
+                        <GuichetBookingCancelAction
+                          bookingId={booking.id}
+                          ticketIds={[ticket.id]}
+                          label="Annuler"
+                          description={`Cette action annule le billet ${ticket.code || ""} (${formatSeatLabel(ticket.seat)}).`}
+                          className="inline-flex items-center justify-center rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60" /> :
 
 
-                      <span className="text-slate-300">-</span>
-                      }
+                        null
+                        }
+                        </div>
                       </td>
                     </tr>);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 
 import { Icon } from "@/components/ui/icons";
 import {
@@ -29,6 +30,39 @@ export default function EventFormModal({
   onClose,
   onSubmit
 }) {
+  const [isGenreOpen, setIsGenreOpen] = useState(false);
+  const genreMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!isGenreOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event) => {
+      const menu = genreMenuRef.current;
+
+      if (!menu || menu.contains(event.target)) {
+        return;
+      }
+
+      setIsGenreOpen(false);
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setIsGenreOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isGenreOpen]);
+
   const isShow = formState.type === "show";
   const showTypeOptions = Array.isArray(showTypes) ? showTypes : [];
   const genreOptions = isShow ?
@@ -191,47 +225,39 @@ export default function EventFormModal({
                     <label className="block text-sm font-medium text-slate-900 mb-2">
                       {genresLabel}
                     </label>
-                    <details className="relative">
-                      <summary
-                        className={`${INPUT_CLASSES} flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
-
-                        <span
-                          className={
-                          formState.genres.length ?
-                          "text-slate-900" :
-                          "text-slate-400"
-                          }>
-
+                    <div ref={genreMenuRef} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsGenreOpen((o) => !o)}
+                        className={`${INPUT_CLASSES} flex items-center justify-between cursor-pointer`}
+                      >
+                        <span className={formState.genres.length ? "text-slate-900" : "text-slate-400"}>
                           {selectedGenresLabel}
                         </span>
-                        <Icon
-                          name="chevronDown"
-                          className="h-4 w-4 text-slate-400" />
-
-                      </summary>
-                      <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-3 max-h-56 overflow-auto">
-                        {genreOptions.map((option) => {
-                          const isSelected = formState.genres.includes(
-                            option.value
-                          );
-
-                          return (
-                            <label
-                              key={option.value}
-                              className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-50 cursor-pointer text-sm text-slate-700">
-
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => onToggleGenre(option.value)}
-                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40" />
-
-                              {option.label}
-                            </label>);
-
-                        })}
-                      </div>
-                    </details>
+                        <Icon name="chevronDown" className={`h-4 w-4 text-slate-400 transition-transform ${isGenreOpen ? "rotate-180" : ""}`} />
+                      </button>
+                      {isGenreOpen ? (
+                        <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg p-3 max-h-56 overflow-auto">
+                          {genreOptions.map((option) => {
+                            const isSelected = formState.genres.includes(option.value);
+                            return (
+                              <label
+                                key={option.value}
+                                className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-50 cursor-pointer text-sm text-slate-700"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => onToggleGenre(option.value)}
+                                  className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
+                                />
+                                {option.label}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                     {isShow && showTypesError ?
                     <p className="mt-2 text-xs text-amber-600">
                         {showTypesError}

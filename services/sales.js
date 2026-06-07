@@ -21,7 +21,22 @@ const fetchWithAuth = async ({ path, token, baseUrl }) => {
   };
 };
 
-export const getSalesTransactions = async ({ page, limit } = {}) => {
+const appendOptionalParam = (params, key, value) => {
+  if (value !== undefined && value !== null && value !== "") {
+    params.set(key, String(value));
+  }
+};
+
+export const getSalesTransactions = async ({
+  page,
+  limit,
+  dateFrom,
+  dateTo,
+  paymentMethod,
+  paymentStatus,
+  bookingSource,
+  status,
+} = {}) => {
   const auth = await getAuthContext();
 
   if (!auth.ok) {
@@ -33,12 +48,14 @@ export const getSalesTransactions = async ({ page, limit } = {}) => {
   }
 
   const params = new URLSearchParams();
-  if (page) {
-    params.set("page", String(page));
-  }
-  if (limit) {
-    params.set("limit", String(limit));
-  }
+  appendOptionalParam(params, "page", page);
+  appendOptionalParam(params, "limit", limit);
+  appendOptionalParam(params, "dateFrom", dateFrom);
+  appendOptionalParam(params, "dateTo", dateTo);
+  appendOptionalParam(params, "paymentMethod", paymentMethod);
+  appendOptionalParam(params, "paymentStatus", paymentStatus);
+  appendOptionalParam(params, "bookingSource", bookingSource);
+  appendOptionalParam(params, "status", status);
 
   const result = await fetchWithAuth({
     path: `/bookings${params.toString() ? `?${params.toString()}` : ""}`,
@@ -85,7 +102,14 @@ export const getSalesBookingDetails = async (bookingId) => {
   };
 };
 
-export const getSalesTickets = async ({ page, limit } = {}) => {
+export const getSalesTickets = async ({
+  page,
+  limit,
+  dateFrom,
+  dateTo,
+  status,
+  pricingName,
+} = {}) => {
   const auth = await getAuthContext();
 
   if (!auth.ok) {
@@ -97,12 +121,12 @@ export const getSalesTickets = async ({ page, limit } = {}) => {
   }
 
   const params = new URLSearchParams();
-  if (page) {
-    params.set("page", String(page));
-  }
-  if (limit) {
-    params.set("limit", String(limit));
-  }
+  appendOptionalParam(params, "page", page);
+  appendOptionalParam(params, "limit", limit);
+  appendOptionalParam(params, "dateFrom", dateFrom);
+  appendOptionalParam(params, "dateTo", dateTo);
+  appendOptionalParam(params, "status", status);
+  appendOptionalParam(params, "pricingName", pricingName);
 
   const result = await fetchWithAuth({
     path: `/tickets${params.toString() ? `?${params.toString()}` : ""}`,
@@ -117,7 +141,16 @@ export const getSalesTickets = async ({ page, limit } = {}) => {
   };
 };
 
-export const getSalesSubscriptions = async ({ page, limit } = {}) => {
+export const getSalesSubscriptions = async ({
+  page,
+  limit,
+  dateFrom,
+  dateTo,
+  paymentMethod,
+  paymentStatus,
+  status,
+  source,
+} = {}) => {
   const auth = await getAuthContext();
 
   if (!auth.ok) {
@@ -129,12 +162,14 @@ export const getSalesSubscriptions = async ({ page, limit } = {}) => {
   }
 
   const params = new URLSearchParams();
-  if (page) {
-    params.set("page", String(page));
-  }
-  if (limit) {
-    params.set("limit", String(limit));
-  }
+  appendOptionalParam(params, "page", page);
+  appendOptionalParam(params, "limit", limit);
+  appendOptionalParam(params, "dateFrom", dateFrom);
+  appendOptionalParam(params, "dateTo", dateTo);
+  appendOptionalParam(params, "paymentMethod", paymentMethod);
+  appendOptionalParam(params, "paymentStatus", paymentStatus);
+  appendOptionalParam(params, "status", status);
+  appendOptionalParam(params, "source", source);
 
   const result = await fetchWithAuth({
     path: `/subscription-sales${

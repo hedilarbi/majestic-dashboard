@@ -24,7 +24,7 @@ export default async function DashboardFormSubmissionListPage({ params }) {
     <div className="mx-auto max-w-7xl space-y-6">
       <Link
         href="/soumissions-formulaires"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-primary"
+        className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
       >
         ← Retour aux formulaires
       </Link>

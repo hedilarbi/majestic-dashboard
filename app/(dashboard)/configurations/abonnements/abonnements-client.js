@@ -38,6 +38,7 @@ const createEmptyForm = () => ({
   allowedSeatType: "normale",
   expirationDate: "",
   description: "",
+  validityDays: "",
   isActive: true,
 });
 
@@ -90,6 +91,7 @@ export default function AbonnementsClient({
       allowedSeatType: item.allowedSeatType || "normale",
       expirationDate: toDateInputValue(item.expirationDate),
       description: item.description || "",
+      validityDays: Number.isFinite(item.validityDays) ? String(item.validityDays) : "",
       isActive: item.isActive !== false,
     });
     setFormError("");
@@ -150,6 +152,7 @@ export default function AbonnementsClient({
     const maxSeatsPerSession = normalizeNumberInput(formState.maxSeatsPerSession);
     const expirationDate = normalizeDateInput(formState.expirationDate);
     const allowedSeatType = formState.allowedSeatType || "normale";
+    const validityDays = formState.validityDays ? normalizeNumberInput(formState.validityDays) : null;
 
     if (!name) {
       return { ok: false, message: "Veuillez saisir un nom." };
@@ -171,6 +174,10 @@ export default function AbonnementsClient({
       return { ok: false, message: "Veuillez saisir une date d'expiration valide." };
     }
 
+    if (formState.validityDays && (validityDays === null || validityDays < 1)) {
+      return { ok: false, message: "Veuillez saisir une validité valide (min. 1 jour)." };
+    }
+
     return {
       ok: true,
       payload: {
@@ -182,6 +189,7 @@ export default function AbonnementsClient({
         allowedSeatType,
         expirationDate,
         isActive: Boolean(formState.isActive),
+        ...(validityDays !== null && Number.isFinite(validityDays) ? { validityDays } : {}),
       },
     };
   };
@@ -490,6 +498,8 @@ export default function AbonnementsClient({
             description="Crée une nouvelle formule d'abonnement."
             onClose={() => (isSaving ? null : closeModals())}
             maxWidth="max-w-xl"
+            containerClassName="max-h-[calc(100vh-3rem)] overflow-hidden"
+            bodyClassName="max-h-[calc(100vh-10rem)] overflow-y-auto pr-1"
           >
             <form className="space-y-4" onSubmit={handleCreate}>
               <div className="space-y-2">
@@ -584,6 +594,25 @@ export default function AbonnementsClient({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
+                  Validité après achat (jours)
+                </label>
+                <input
+                  name="validityDays"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={formState.validityDays}
+                  onChange={handleInputChange}
+                  placeholder="Ex : 30"
+                  className={INPUT_CLASSES}
+                />
+                <p className="text-xs text-slate-400">
+                  Optionnel. Expire X jours après l&apos;achat du client.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
                   Description
                 </label>
                 <textarea
@@ -638,6 +667,8 @@ export default function AbonnementsClient({
             description="Mettez à jour la formule d'abonnement."
             onClose={() => (isSaving ? null : closeModals())}
             maxWidth="max-w-xl"
+            containerClassName="max-h-[calc(100vh-3rem)] overflow-hidden"
+            bodyClassName="max-h-[calc(100vh-10rem)] overflow-y-auto pr-1"
           >
             <form className="space-y-4" onSubmit={handleUpdate}>
               <div className="space-y-2">
@@ -728,6 +759,25 @@ export default function AbonnementsClient({
                   onChange={handleInputChange}
                   className={INPUT_CLASSES}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Validité après achat (jours)
+                </label>
+                <input
+                  name="validityDays"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={formState.validityDays}
+                  onChange={handleInputChange}
+                  placeholder="Ex : 30"
+                  className={INPUT_CLASSES}
+                />
+                <p className="text-xs text-slate-400">
+                  Optionnel. Expire X jours après l&apos;achat du client.
+                </p>
               </div>
 
               <div className="space-y-2">

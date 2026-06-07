@@ -27,12 +27,6 @@ const NAV_ITEMS = [
   module: "reservation_requests"
 },
 {
-  label: "Soumissions de formulaires",
-  icon: "article",
-  href: "/soumissions-formulaires",
-  module: "blog_form_submissions"
-},
-{
   label: "Caisse",
   icon: "money",
   href: "/caisse",
@@ -43,6 +37,35 @@ const NAV_ITEMS = [
   icon: "activity",
   href: "/audit",
   module: "audit_logs"
+}];
+
+
+const BLOGUE_ITEMS = [
+{
+  label: "Vue d'ensemble",
+  href: "/gestion-blogue",
+  modules: ["blog_articles", "blog_videos", "blog_forms"],
+  exact: true
+},
+{
+  label: "Articles",
+  href: "/gestion-blogue/articles",
+  module: "blog_articles"
+},
+{
+  label: "Vidéos",
+  href: "/gestion-blogue/bandes-annonces",
+  module: "blog_videos"
+},
+{
+  label: "Formulaires",
+  href: "/gestion-blogue/formulaires",
+  module: "blog_forms"
+},
+{
+  label: "Soumissions",
+  href: "/gestion-blogue/soumissions",
+  module: "blog_form_submissions"
 }];
 
 
@@ -70,6 +93,7 @@ const CONFIG_ITEMS = [
   module: "show_types"
 },
 { label: "Affiches", href: "/configurations/affiches", module: "home_hero" },
+{ label: "Partenaires", href: "/configurations/partenaires", module: "home_hero" },
 { label: "Salles", href: "/configurations/salles", module: "rooms" }];
 
 
@@ -99,11 +123,27 @@ const isActivePath = (pathname, href) => {
   return pathname === href || pathname.startsWith(`${href}/`);
 };
 
+const isItemActivePath = (pathname, item) =>
+  item?.exact ? pathname === item.href : isActivePath(pathname, item.href);
+
+const hasItemListPermission = (user, item) => {
+  if (Array.isArray(item.modules)) {
+    return item.modules.some((moduleKey) =>
+      hasDashboardPermission(user, moduleKey, "list")
+    );
+  }
+
+  return hasDashboardPermission(user, item.module, "list");
+};
+
 export default function SidebarNav() {
   const pathname = usePathname();
   const { user } = useUser();
   const navItems = NAV_ITEMS.filter((item) =>
   hasDashboardPermission(user, item.module, "list")
+  );
+  const blogueItems = BLOGUE_ITEMS.filter((item) =>
+  hasItemListPermission(user, item)
   );
   const configItems = CONFIG_ITEMS.filter((item) =>
   hasDashboardPermission(user, item.module, "list")
@@ -114,14 +154,22 @@ export default function SidebarNav() {
   const isVenteActive = venteItems.some((item) =>
   isActivePath(pathname, item.href)
   );
+  const isBlogueActive = blogueItems.some((item) =>
+  isItemActivePath(pathname, item)
+  );
   const isConfigActive = configItems.some((item) =>
   isActivePath(pathname, item.href)
   );
   const [isVenteOpen, setIsVenteOpen] = useState(isVenteActive);
+  const [isBlogueOpen, setIsBlogueOpen] = useState(isBlogueActive);
   const [isConfigOpen, setIsConfigOpen] = useState(isConfigActive);
 
   const handleVenteToggle = (event) => {
     setIsVenteOpen(event.currentTarget.open);
+  };
+
+  const handleBlogueToggle = (event) => {
+    setIsBlogueOpen(event.currentTarget.open);
   };
 
   const handleConfigToggle = (event) => {
@@ -149,6 +197,50 @@ export default function SidebarNav() {
           </Link>);
 
       })}
+      {blogueItems.length ?
+      <details
+        className="group"
+        open={isBlogueOpen || isBlogueActive}
+        onToggle={handleBlogueToggle}>
+
+          <summary
+          className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer list-none [&::-webkit-details-marker]:hidden ${
+          isBlogueActive ?
+          "bg-primary/10 text-primary" :
+          "text-slate-600 hover:bg-white/70 hover:text-slate-900"}`
+          }>
+
+            <span className="flex items-center gap-3">
+              <Icon name="article" className="h-5 w-5" />
+              <span>Gestion blogue</span>
+            </span>
+            <Icon
+            name="chevronDown"
+            className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
+
+          </summary>
+          <div className="mt-1 space-y-1 pl-10">
+            {blogueItems.map((item) => {
+            const isActive = isItemActivePath(pathname, item);
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`block rounded-lg px-3 py-2 text-[13px] font-medium transition ${
+                isActive ?
+                "bg-primary/10 text-primary" :
+                "text-slate-500 hover:bg-white/70 hover:text-slate-900"}`
+                }
+                aria-current={isActive ? "page" : undefined}>
+
+                  {item.label}
+                </Link>);
+
+          })}
+          </div>
+        </details> :
+      null}
       {venteItems.length ?
       <details
         className="group"

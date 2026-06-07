@@ -35,7 +35,7 @@ export default async function GuichetSubscriptionCheckoutPage({ params }) {
         <div>
           <Link
             href="/guichet/abonnements"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-sm transition hover:bg-primary/90"
             aria-label="Retour aux abonnements">
 
             <Icon name="chevronLeft" className="h-4 w-4" />

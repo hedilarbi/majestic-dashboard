@@ -6,6 +6,7 @@ export const getAuditLogs = async ({
   page,
   limit,
   type,
+  view,
   dateFrom,
   dateTo,
 } = {}) => {
@@ -31,6 +32,9 @@ export const getAuditLogs = async ({
   }
   if (type) {
     query.set("type", type);
+  }
+  if (view) {
+    query.set("view", view);
   }
   if (dateFrom) {
     query.set("dateFrom", dateFrom);

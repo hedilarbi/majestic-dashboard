@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import GuichetHistoriquePrintAction from "@/components/guichet/GuichetHistoriquePrintAction";
 import { Icon } from "@/components/ui/icons";
 import { formatDate, formatDateTime, formatPrice } from "@/lib/configurations/formatters";
 import { getGuichetHistory } from "@/services/guichet-history";
@@ -63,6 +62,30 @@ const toDateInputValue = (value) => {
   )}`;
 };
 
+const buildHistoryQueryString = ({ dateFrom, dateTo, type }) => {
+  const params = new URLSearchParams();
+
+  if (type) {
+    params.set("type", type);
+  }
+  if (dateFrom) {
+    params.set("dateFrom", dateFrom);
+  }
+  if (dateTo) {
+    params.set("dateTo", dateTo);
+  }
+
+  return params.toString();
+};
+
+const appendQueryString = (href, queryString) => {
+  if (!href || !queryString) {
+    return href || "";
+  }
+
+  return `${href}?${queryString}`;
+};
+
 export default async function GuichetHistoriquePage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const today = toDateInputValue(new Date());
@@ -83,6 +106,11 @@ export default async function GuichetHistoriquePage({ searchParams }) {
       : "all";
   const isTodaySelected =
     appliedDateFrom === today && appliedDateTo === today;
+  const historyQueryString = buildHistoryQueryString({
+    dateFrom: appliedDateFrom,
+    dateTo: appliedDateTo,
+    type: appliedType,
+  });
 
   const { items, error } = await getGuichetHistory({
     limit: 200,
@@ -224,15 +252,12 @@ export default async function GuichetHistoriquePage({ searchParams }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        {booking.type === "ticket" && booking.id ? (
-                          <GuichetHistoriquePrintAction
-                            bookingId={booking.id}
-                            printCount={booking.printCount ?? 0}
-                          />
-                        ) : null}
                         {booking.actionHref ? (
                           <Link
-                            href={booking.actionHref}
+                            href={appendQueryString(
+                              booking.actionHref,
+                              historyQueryString,
+                            )}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-primary"
                             aria-label="Voir le détail du booking"
                             title="Voir le detail"

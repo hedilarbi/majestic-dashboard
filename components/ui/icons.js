@@ -147,6 +147,13 @@ const ICONS = {
       <path d="M5 15v4a2 2 0 002 2h10a2 2 0 002-2v-4" />
     </>
   ),
+  download: (
+    <>
+      <path d="M12 3v12" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M5 19h14" />
+    </>
+  ),
   check: <path d="M5 13l4 4L19 7" />,
   clipboard: (
     <>

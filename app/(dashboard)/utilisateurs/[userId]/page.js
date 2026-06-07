@@ -14,14 +14,15 @@ export default async function UserDetailsPage({ params }) {
     );
   }
 
-  const response = await getUserDetails(params.userId);
+  const { userId } = await params;
+  const response = await getUserDetails(userId);
 
   if (!response.ok) {
     return (
       <div className="max-w-4xl mx-auto py-20 text-center">
         <h2 className="text-2xl font-bold text-slate-900">Utilisateur introuvable</h2>
         <p className="text-slate-500 mt-2">{response.message}</p>
-        <Link href="/utilisateurs" className="mt-6 inline-flex items-center gap-2 text-primary hover:underline">
+        <Link href="/utilisateurs" className="mt-6 inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90">
           <Icon name="chevronLeft" className="h-4 w-4" />
           Retour à la liste
         </Link>

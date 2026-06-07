@@ -221,6 +221,9 @@ function TicketPrintCard({ ticket, booking }) {
           {bookingNumber}
         </p> :
       null}
+      <p className="mt-2 text-center text-[9px] italic text-slate-400">
+        Votre présence fait vivre le Majestic. Bon spectacle !
+      </p>
     </article>);
 
 }
@@ -390,16 +393,6 @@ export default function GuichetCheckoutClient({
       setPrintState("idle");
     }
 
-    if (bookingForPrint?.id) {
-      try {
-        await fetch(`/api/guichet/bookings/${bookingForPrint.id}/print`, {
-          method: "POST",
-        });
-      } catch (_error) {
-        // Do not block printing if the audit log request fails.
-      }
-    }
-
     printRedirectHandledRef.current = false;
     printDialogOpenRef.current = true;
     setPrintState("printing");
@@ -412,7 +405,7 @@ export default function GuichetCheckoutClient({
 
     // Store the timer so afterprint can clear it
     printFallbackTimerRef.current = fallbackTimer;
-  }, [bookingForPrint?.id, isPrinting, printState]);
+  }, [isPrinting, printState]);
 
   useEffect(() => {
     if (printState !== "printing" || typeof window === "undefined") {
@@ -455,8 +448,20 @@ export default function GuichetCheckoutClient({
       } else {
         // Actual print completed
         printRedirectHandledRef.current = true;
-        setPrintState("done");
-        router.replace("/guichet");
+        void (async () => {
+          if (bookingForPrint?.id) {
+            try {
+              await fetch(`/api/guichet/bookings/${bookingForPrint.id}/print`, {
+                method: "POST",
+              });
+            } catch (_error) {
+              // Do not block navigation if the audit log request fails.
+            }
+          }
+
+          setPrintState("done");
+          router.replace("/guichet");
+        })();
       }
     };
 
@@ -468,7 +473,7 @@ export default function GuichetCheckoutClient({
       window.removeEventListener("beforeprint", handleBeforePrint);
       window.removeEventListener("afterprint", handleAfterPrint);
     };
-  }, [printState, router]);
+  }, [bookingForPrint?.id, printState, router]);
 
   const overrideMap = useMemo(() => {
     const map = new Map();
@@ -882,7 +887,9 @@ export default function GuichetCheckoutClient({
   appliedPromoCode,
   assignedCount,
   canConfirm,
+  isSubscriptionPaymentRequested,
   normalizedSubscriptionCode,
+  paymentMethod,
   pricingItemsList,
   quantities,
   reservation,
@@ -894,75 +901,6 @@ export default function GuichetCheckoutClient({
   if (shouldShowPrintInterface) {
     return (
       <>
-        <style jsx global>{`
-          @media print {
-            @page {
-              /* Thermal receipt paper: 80mm roll, portrait */
-              size: 79mm auto;
-              orientation: portrait;
-              margin: 0;
-            }
-
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              overflow: hidden !important;
-            }
-
-            body * {
-              visibility: hidden !important;
-            }
-
-            .guichet-print-root,
-            .guichet-print-root * {
-              visibility: visible !important;
-            }
-
-            .guichet-print-root {
-              position: fixed !important;
-              left: 0 !important;
-              top: 0 !important;
-              width: 79mm !important;
-              margin: 0 !important;
-              padding: 0 !important;
-            }
-
-            .guichet-print-root > :not(.ticket-print-grid) {
-              display: none !important;
-            }
-
-            .ticket-print-grid {
-              display: block !important;
-              margin: 0 !important;
-              padding: 0 !important;
-            }
-
-            .guichet-ticket-print-sheet {
-              width: 79mm !important;
-              min-width: 79mm !important;
-              max-width: 79mm !important;
-              /* auto height so content dictates cut length */
-              height: auto !important;
-              min-height: unset !important;
-              max-height: unset !important;
-              margin: 0 !important;
-              padding: 4mm !important;
-              border: 0 !important;
-              box-shadow: none !important;
-              border-radius: 0 !important;
-              overflow: hidden !important;
-              break-after: page;
-              page-break-after: always;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-
-            .guichet-ticket-print-sheet:last-child {
-              break-after: auto;
-              page-break-after: auto;
-            }
-          }
-        `}</style>
         <TicketPrintInterface
           booking={bookingForPrint}
           onPrint={handlePrint}

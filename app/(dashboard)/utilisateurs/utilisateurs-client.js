@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
+import ExportButtons from "@/components/dashboard/export-buttons";
 import { Icon } from "@/components/ui/icons";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import { useToast } from "@/hooks/use-toast";
@@ -11,13 +12,7 @@ import { useDashboardModulePermissions } from "@/hooks/use-dashboard-permissions
 
 const ROLE_LABELS = {
   customer: "Client",
-  admin: "Administrateur",
-  super_admin: "Super Admin",
   guest: "Invité",
-  blog_manager: "Blog Manager",
-  cashier: "Caissier",
-  ticket_office: "Guichet",
-  door_staff: "Contrôle",
 };
 
 const ROLE_STYLES = {
@@ -28,16 +23,17 @@ const ROLE_STYLES = {
   fallback: "bg-slate-50 text-slate-500",
 };
 
-export default function UtilisateursClient({ initialData, initialError }) {
+export default function UtilisateursClient({ initialData, initialError = "" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
   const permissions = useDashboardModulePermissions("users");
-  const [isPending, startTransition] = useTransition();
 
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [role, setRole] = useState(searchParams.get("role") || "");
   const [status, setStatus] = useState(searchParams.get("status") || "");
+  const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") || "");
+  const [dateTo, setDateTo] = useState(searchParams.get("dateTo") || "");
 
   const [pendingStatusToggle, setPendingStatusToggle] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -52,6 +48,8 @@ export default function UtilisateursClient({ initialData, initialError }) {
     if (search) params.set("search", search); else params.delete("search");
     if (role) params.set("role", role); else params.delete("role");
     if (status) params.set("status", status); else params.delete("status");
+    if (dateFrom) params.set("dateFrom", dateFrom); else params.delete("dateFrom");
+    if (dateTo) params.set("dateTo", dateTo); else params.delete("dateTo");
     params.set("page", "1");
     router.push(`?${params.toString()}`);
   };
@@ -89,10 +87,20 @@ export default function UtilisateursClient({ initialData, initialError }) {
             Gérez les clients et utilisateurs de la plateforme.
           </p>
         </div>
+        <ExportButtons
+          resource="utilisateurs"
+          queryString={searchParams.toString()}
+        />
       </div>
 
+      {initialError ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {initialError}
+        </div>
+      ) : null}
+
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6">
-        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form onSubmit={handleSearch} className="grid grid-cols-1 gap-4 md:grid-cols-6">
           <div className="relative">
             <input
               type="text"
@@ -122,6 +130,20 @@ export default function UtilisateursClient({ initialData, initialError }) {
             <option value="active">Actif</option>
             <option value="suspended">Bloqué</option>
           </select>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 transition"
+            aria-label="Date début"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 transition"
+            aria-label="Date fin"
+          />
           <button
             type="submit"
             className="bg-primary text-white px-6 py-2 rounded-xl font-semibold hover:bg-primary/90 transition shadow-sm shadow-primary/30"
@@ -144,6 +166,13 @@ export default function UtilisateursClient({ initialData, initialError }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-slate-600">
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-sm text-slate-400">
+                    Aucun utilisateur trouvé.
+                  </td>
+                </tr>
+              ) : null}
               {users.map((u) => (
                 <tr key={u._id} className="hover:bg-slate-50">
                   <td className="px-6 py-4">

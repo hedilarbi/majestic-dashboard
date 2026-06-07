@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getAuthContext } from "@/services/api";
 
-export async function closeTicketOfficeRegister(staffId) {
+export async function closeTicketOfficeRegister(staffId, period = {}) {
   const auth = await getAuthContext();
 
   if (!auth.ok) {
@@ -21,7 +21,11 @@ export async function closeTicketOfficeRegister(staffId) {
       method: "POST",
       headers: {
         Authorization: `Bearer ${auth.token}`,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        periodStartAt: period?.periodStartAt || undefined,
+      }),
       cache: "no-store",
     },
   );

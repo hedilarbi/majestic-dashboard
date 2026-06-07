@@ -3,7 +3,20 @@ import Link from "next/link";
 import { BLOG_NAV_ITEMS } from "@/lib/blogue/constants";
 import { Icon } from "@/components/ui/icons";
 
-export default function BlogOverview({ items = [] }) {
+const resolveBlogHref = (href, basePath) =>
+  href.replace(/^\/blogue/, basePath.replace(/\/$/, ""));
+
+export default function BlogOverview({
+  items = [],
+  basePath = "/blogue",
+  allowedTypes = null,
+}) {
+  const allowedTypeSet = Array.isArray(allowedTypes) ?
+    new Set(allowedTypes) :
+    null;
+  const navItems = allowedTypeSet ?
+    BLOG_NAV_ITEMS.filter((item) => allowedTypeSet.has(item.key)) :
+    BLOG_NAV_ITEMS;
   const counts = items.reduce((accumulator, item) => {
     const key = item?.type;
     if (!key) {
@@ -30,10 +43,10 @@ export default function BlogOverview({ items = [] }) {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
-        {BLOG_NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <Link
             key={item.key}
-            href={item.href}
+            href={resolveBlogHref(item.href, basePath)}
             className="group rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_60px_-45px_rgba(15,42,120,0.45)] transition hover:-translate-y-0.5 hover:border-primary/30"
           >
             <div className="flex items-start justify-between gap-4">

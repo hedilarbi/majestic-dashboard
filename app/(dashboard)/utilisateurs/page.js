@@ -17,8 +17,10 @@ export default async function UtilisateursPage({ searchParams }) {
   const search = resolvedParams.search || "";
   const role = resolvedParams.role || "";
   const status = resolvedParams.status || "";
+  const dateFrom = resolvedParams.dateFrom || "";
+  const dateTo = resolvedParams.dateTo || "";
 
-  const response = await getUsers({ page, search, role, status });
+  const response = await getUsers({ page, search, role, status, dateFrom, dateTo });
 
   return (
     <UtilisateursClient 

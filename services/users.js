@@ -2,7 +2,33 @@ import "server-only";
 
 import { getAuthContext } from "./api";
 
-export async function getUsers({ page = 1, limit = 50, search = "", role = "", status = "" } = {}) {
+const parseResponseBody = async (response) => {
+  const text = await response.text().catch(() => "");
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (_error) {
+    if (/^\s*</.test(text)) {
+      return {};
+    }
+
+    return { message: text };
+  }
+};
+
+export async function getUsers({
+  page = 1,
+  limit = 50,
+  search = "",
+  role = "",
+  status = "",
+  dateFrom = "",
+  dateTo = "",
+} = {}) {
   const auth = await getAuthContext();
   if (!auth.ok) {
     return { ok: false, message: auth.message };
@@ -14,9 +40,11 @@ export async function getUsers({ page = 1, limit = 50, search = "", role = "", s
   if (search) query.append("search", search);
   if (role) query.append("role", role);
   if (status) query.append("status", status);
+  if (dateFrom) query.append("dateFrom", dateFrom);
+  if (dateTo) query.append("dateTo", dateTo);
 
   try {
-    const response = await fetch(`${auth.baseUrl}/users?${query.toString()}`, {
+    const response = await fetch(`${auth.baseUrl}/admin?${query.toString()}`, {
       headers: {
         Authorization: `Bearer ${auth.token}`,
         Accept: "application/json",
@@ -24,14 +52,14 @@ export async function getUsers({ page = 1, limit = 50, search = "", role = "", s
       cache: "no-store",
     });
 
-    const data = await response.json();
+    const data = await parseResponseBody(response);
     if (!response.ok) {
       return { ok: false, message: data.message || "Erreur lors de la récupération des utilisateurs" };
     }
 
     return { ok: true, ...data };
-  } catch (error) {
-    return { ok: false, message: "Erreur réseau" };
+  } catch (_error) {
+    return { ok: false, message: "Erreur réseau. Vérifiez que l'API serveur est démarrée." };
   }
 }
 
@@ -41,8 +69,12 @@ export async function getUserDetails(userId) {
     return { ok: false, message: auth.message };
   }
 
+  if (!userId) {
+    return { ok: false, message: "Identifiant utilisateur manquant." };
+  }
+
   try {
-    const response = await fetch(`${auth.baseUrl}/users/${userId}`, {
+    const response = await fetch(`${auth.baseUrl}/admin/${userId}`, {
       headers: {
         Authorization: `Bearer ${auth.token}`,
         Accept: "application/json",
@@ -50,14 +82,14 @@ export async function getUserDetails(userId) {
       cache: "no-store",
     });
 
-    const data = await response.json();
+    const data = await parseResponseBody(response);
     if (!response.ok) {
       return { ok: false, message: data.message || "Erreur lors de la récupération des détails de l'utilisateur" };
     }
 
     return { ok: true, ...data };
-  } catch (error) {
-    return { ok: false, message: "Erreur réseau" };
+  } catch (_error) {
+    return { ok: false, message: "Erreur réseau. Vérifiez que l'API serveur est démarrée." };
   }
 }
 
@@ -68,7 +100,7 @@ export async function toggleUserStatus(userId) {
   }
 
   try {
-    const response = await fetch(`${auth.baseUrl}/users/${userId}/toggle-status`, {
+    const response = await fetch(`${auth.baseUrl}/admin/${userId}/toggle-status`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${auth.token}`,
@@ -76,13 +108,13 @@ export async function toggleUserStatus(userId) {
       },
     });
 
-    const data = await response.json();
+    const data = await parseResponseBody(response);
     if (!response.ok) {
       return { ok: false, message: data.message || "Erreur lors du changement de statut" };
     }
 
     return { ok: true, ...data };
-  } catch (error) {
-    return { ok: false, message: "Erreur réseau" };
+  } catch (_error) {
+    return { ok: false, message: "Erreur réseau. Vérifiez que l'API serveur est démarrée." };
   }
 }

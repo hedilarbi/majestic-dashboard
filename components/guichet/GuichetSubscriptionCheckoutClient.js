@@ -38,7 +38,9 @@ export default function GuichetSubscriptionCheckoutClient({
     firstName: "",
     lastName: "",
     email: "",
+    paymentMethod: "cash",
   });
+  const [step, setStep] = useState("form"); // "form" | "confirm"
   const [submitState, setSubmitState] = useState({
     status: "idle",
     message: "",
@@ -70,6 +72,20 @@ export default function GuichetSubscriptionCheckoutClient({
       ...current,
       [name]: value,
     }));
+  };
+
+  const PAYMENT_LABELS = { cash: "Espèces", card: "Carte bancaire", transfer: "Virement" };
+
+  const handleFormSubmit = (event) => {
+    event.preventDefault();
+    const firstName = normalizeText(formState.firstName);
+    const lastName = normalizeText(formState.lastName);
+    const email = normalizeEmail(formState.email);
+    if (!firstName || !lastName || !isValidEmail(email) || !subscriptionId) {
+      setSubmitState({ status: "error", message: "Le nom, le prénom et un email valide sont obligatoires.", sale: null });
+      return;
+    }
+    setStep("confirm");
   };
 
   const handleSubmit = async (event) => {
@@ -105,7 +121,7 @@ export default function GuichetSubscriptionCheckoutClient({
             lastName,
             email,
           },
-          paymentMethod: "cash",
+          paymentMethod: formState.paymentMethod || "cash",
         }),
       });
 
@@ -209,9 +225,32 @@ export default function GuichetSubscriptionCheckoutClient({
         </div>
       ) : null}
 
+      {step === "confirm" ? (
+        <div className="rounded-3xl border border-primary/30 bg-primary/5 p-6 shadow-sm space-y-4">
+          <h2 className="text-xl font-semibold text-slate-900">Confirmer la vente</h2>
+          <div className="grid gap-2 text-sm text-slate-700">
+            <p><span className="font-medium">Client :</span> {formState.firstName} {formState.lastName}</p>
+            <p><span className="font-medium">Email :</span> {formState.email}</p>
+            <p><span className="font-medium">Abonnement :</span> {subscriptionSummary.name} — {subscriptionSummary.price}</p>
+            <p><span className="font-medium">Mode de paiement :</span> {PAYMENT_LABELS[formState.paymentMethod] || formState.paymentMethod}</p>
+          </div>
+          {submitState.status === "error" ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{submitState.message}</div>
+          ) : null}
+          <div className="flex gap-3 justify-end">
+            <button type="button" onClick={() => setStep("form")} className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
+              Modifier
+            </button>
+            <button type="button" disabled={isSubmitting} onClick={handleSubmit} className={`inline-flex h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold transition ${isSubmitting ? "cursor-not-allowed bg-slate-200 text-slate-400" : "bg-primary text-white hover:bg-primary/90"}`}>
+              {isSubmitting ? "Confirmation..." : "Valider la vente"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <form
-        className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
-        onSubmit={handleSubmit}
+        className={`rounded-3xl border border-slate-200 bg-white p-6 shadow-sm ${step === "confirm" ? "hidden" : ""}`}
+        onSubmit={handleFormSubmit}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -265,6 +304,20 @@ export default function GuichetSubscriptionCheckoutClient({
             className={INPUT_CLASSES}
             placeholder="client@email.com"
           />
+        </label>
+
+        <label className="mt-4 block space-y-2">
+          <span className="text-sm font-medium text-slate-700">Mode de paiement</span>
+          <select
+            name="paymentMethod"
+            value={formState.paymentMethod}
+            onChange={handleInputChange}
+            className={INPUT_CLASSES}
+          >
+            <option value="cash">Espèces</option>
+            <option value="card">Carte bancaire</option>
+            <option value="transfer">Virement</option>
+          </select>
         </label>
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

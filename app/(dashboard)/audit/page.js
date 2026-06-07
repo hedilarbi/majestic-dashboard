@@ -24,15 +24,13 @@ const formatDateTime = (value) => {
 };
 
 const ACTION_LABELS = {
-  ticket_cancellation: "Annulation",
-  ticket_print: "Impression",
-  ticket_print_cancelled: "Imp. annulée",
+  ticket_cancellation: "Billet annulé",
+  ticket_print: "Réimpression",
 };
 
 const ACTION_STYLES = {
   ticket_cancellation: "bg-rose-100 text-rose-700",
   ticket_print: "bg-sky-100 text-sky-700",
-  ticket_print_cancelled: "bg-amber-100 text-amber-700",
 };
 
 const ROLE_LABELS = {
@@ -45,27 +43,82 @@ const ROLE_LABELS = {
 };
 
 const getTypeFilter = (value) => {
-  if (
-    value === "ticket_cancellation" ||
-    value === "ticket_print" ||
-    value === "ticket_print_cancelled"
-  ) {
+  if (value === "ticket_cancellation" || value === "ticket_print") {
     return value;
   }
   return "";
 };
 
-const renderPricingBreakdown = (items = []) => {
-  if (!items.length) {
-    return "-";
-  }
+const getTicketPrintCount = (item, ticket) => {
+  const ticketPrints = Array.isArray(item?.details?.ticketPrints)
+    ? item.details.ticketPrints
+    : [];
+  const ticketId = ticket?.id || "";
+  const ticketCode = ticket?.code || "";
+  const detail = ticketPrints.find(
+    (entry) =>
+      (ticketId && entry?.ticketId === ticketId) ||
+      (ticketCode && entry?.code === ticketCode),
+  );
+  const detailCount = Number(detail?.printCount);
+  const ticketCount = Number(ticket?.printCount);
+  const counts = [ticketCount, detailCount].filter(Number.isFinite);
 
-  return items
-    .map(
-      (item) =>
-        `${item.quantity} ${item.name} ${formatPrice(item.unitPrice || 0)}`,
-    )
-    .join(" • ");
+  return counts.length ? Math.max(...counts) : 0;
+};
+
+const buildFallbackTickets = (item) => {
+  const codes = Array.isArray(item?.ticketCodes) ? item.ticketCodes : [];
+  const seats = Array.isArray(item?.seatLabels) ? item.seatLabels : [];
+
+  return codes.map((code, index) => ({
+    id: `${item?.id || "audit"}:${code || index}`,
+    code,
+    seatLabel: seats[index] || "",
+    printCount: 0,
+  }));
+};
+
+const buildTicketAuditRows = (items = []) => {
+  const rowsByKey = new Map();
+
+  items.forEach((item) => {
+    const tickets = Array.isArray(item?.tickets) && item.tickets.length
+      ? item.tickets
+      : buildFallbackTickets(item);
+
+    tickets.forEach((ticket, index) => {
+      const printCount = getTicketPrintCount(item, ticket);
+      const isCancellation = item.actionType === "ticket_cancellation";
+      const isReprint = item.actionType === "ticket_print" && printCount > 1;
+
+      if (!isCancellation && !isReprint) {
+        return;
+      }
+
+      const rowKey = [
+        item.actionType,
+        ticket?.id || ticket?.code || item.id || index,
+      ].join(":");
+
+      if (rowsByKey.has(rowKey)) {
+        return;
+      }
+
+      rowsByKey.set(rowKey, {
+        id: rowKey,
+        actionType: item.actionType,
+        createdAt: item.createdAt,
+        actor: item.actor,
+        booking: item.booking,
+        session: item.session,
+        ticket,
+        printCount,
+      });
+    });
+  });
+
+  return Array.from(rowsByKey.values());
 };
 
 export default async function AuditPage({ searchParams }) {
@@ -90,17 +143,18 @@ export default async function AuditPage({ searchParams }) {
 
   const { ok, items, message } = await getAuditLogs({
     type,
+    view: "ticket_tracking",
     dateFrom,
     dateTo,
     limit: 200,
   });
 
-  const cancellationCount = items.filter(
+  const ticketAuditRows = buildTicketAuditRows(items);
+  const cancellationCount = ticketAuditRows.filter(
     (item) => item.actionType === "ticket_cancellation",
   ).length;
-  const printCount = items.filter((item) => item.actionType === "ticket_print").length;
-  const printCancelledCount = items.filter(
-    (item) => item.actionType === "ticket_print_cancelled",
+  const reprintCount = ticketAuditRows.filter(
+    (item) => item.actionType === "ticket_print",
   ).length;
 
   return (
@@ -111,7 +165,7 @@ export default async function AuditPage({ searchParams }) {
             Audit
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Annulations de billets et impressions réalisées dans le back-office.
+            Billets annulés et billets imprimés plus d&apos;une fois.
           </p>
         </div>
 
@@ -124,9 +178,8 @@ export default async function AuditPage({ searchParams }) {
               className="h-10 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             >
               <option value="">Tous</option>
-              <option value="ticket_cancellation">Annulations</option>
-              <option value="ticket_print">Impressions</option>
-              <option value="ticket_print_cancelled">Impressions annulées</option>
+              <option value="ticket_cancellation">Billets annulés</option>
+              <option value="ticket_print">Réimpressions</option>
             </select>
           </label>
 
@@ -162,13 +215,15 @@ export default async function AuditPage({ searchParams }) {
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
-            Entrées
+            Billets suivis
           </p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{items.length}</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">
+            {ticketAuditRows.length}
+          </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
-            Annulations
+            Billets annulés
           </p>
           <p className="mt-3 text-3xl font-semibold text-slate-900">
             {cancellationCount}
@@ -176,15 +231,11 @@ export default async function AuditPage({ searchParams }) {
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
-            Impressions
+            Réimpressions
           </p>
-          <p className="mt-3 text-3xl font-semibold text-slate-900">{printCount}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
-            Imp. annulées
+          <p className="mt-3 text-3xl font-semibold text-slate-900">
+            {reprintCount}
           </p>
-          <p className="mt-3 text-3xl font-semibold text-amber-600">{printCancelledCount}</p>
         </div>
       </div>
 
@@ -223,19 +274,8 @@ export default async function AuditPage({ searchParams }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {items.length ? (
-                items.map((item) => {
-                  const detailText =
-                    item.actionType === "ticket_cancellation"
-                      ? formatPrice(
-                          item?.details?.cancelledNetAmount ??
-                            item?.details?.cancelledGrossAmount ??
-                            0,
-                        )
-                      : item.actionType === "ticket_print_cancelled"
-                        ? `Annulé après ${item?.details?.printCount ?? 0} impression(s) précédente(s)`
-                        : renderPricingBreakdown(item.pricingBreakdown);
-
+              {ticketAuditRows.length ? (
+                ticketAuditRows.map((item) => {
                   return (
                     <tr key={item.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 text-slate-600">
@@ -287,23 +327,24 @@ export default async function AuditPage({ searchParams }) {
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="font-semibold text-slate-900">
-                            {item.ticketsCount}
+                            {item.ticket?.code || "-"}
                           </span>
                           <span className="text-xs text-slate-500">
-                            {item.seatLabels.length
-                              ? item.seatLabels.join(", ")
-                              : "-"}
+                            Siège : {item.ticket?.seatLabel || "-"}
                           </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-slate-600">
                         <div className="max-w-md">
-                          <p>{detailText}</p>
-                          {item.ticketCodes.length ? (
-                            <p className="mt-1 text-xs text-slate-400">
-                              Codes : {item.ticketCodes.join(", ")}
-                            </p>
-                          ) : null}
+                          <p>
+                            {item.actionType === "ticket_cancellation"
+                              ? "Billet annulé"
+                              : `${item.printCount} impressions`}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {item.ticket?.pricingName || "Tarif"} •{" "}
+                            {formatPrice(item.ticket?.price || 0)}
+                          </p>
                         </div>
                       </td>
                     </tr>
@@ -315,7 +356,7 @@ export default async function AuditPage({ searchParams }) {
                     colSpan={7}
                     className="px-6 py-10 text-center text-sm text-slate-500"
                   >
-                    Aucune entrée d&apos;audit trouvée.
+                    Aucun billet annulé ou réimprimé trouvé.
                   </td>
                 </tr>
               )}

@@ -37,6 +37,7 @@ export async function createSubscription({
   allowedSeatType,
   expirationDate,
   description,
+  validityDays,
   isActive = true,
 }) {
   const auth = await getAuthContext();
@@ -53,6 +54,7 @@ export async function createSubscription({
   const normalizedCredits = normalizeNumber(totalCredits);
   const normalizedDate = normalizeDate(expirationDate);
   const normalizedMaxSeats = normalizeNumber(maxSeatsPerSession);
+  const normalizedValidityDays = normalizeNumber(validityDays);
 
   if (normalizedPrice === null) {
     return { ok: false, message: "Le prix est invalide." };
@@ -75,6 +77,7 @@ export async function createSubscription({
     isActive: Boolean(isActive),
     ...(normalizedMaxSeats !== null && { maxSeatsPerSession: normalizedMaxSeats }),
     ...(allowedSeatType && { allowedSeatType }),
+    ...(normalizedValidityDays !== null && { validityDays: normalizedValidityDays }),
   };
 
   const response = await fetch(`${auth.baseUrl}/subscriptions`, {
@@ -109,6 +112,7 @@ export async function updateSubscription({
   allowedSeatType,
   expirationDate,
   description,
+  validityDays,
   isActive = true,
 }) {
   const auth = await getAuthContext();
@@ -129,6 +133,7 @@ export async function updateSubscription({
   const normalizedCredits = normalizeNumber(totalCredits);
   const normalizedDate = normalizeDate(expirationDate);
   const normalizedMaxSeats = normalizeNumber(maxSeatsPerSession);
+  const normalizedValidityDays = normalizeNumber(validityDays);
 
   if (normalizedPrice === null) {
     return { ok: false, message: "Le prix est invalide." };
@@ -151,12 +156,13 @@ export async function updateSubscription({
     isActive: Boolean(isActive),
     ...(normalizedMaxSeats !== null && { maxSeatsPerSession: normalizedMaxSeats }),
     ...(allowedSeatType && { allowedSeatType }),
+    ...(normalizedValidityDays !== null && { validityDays: normalizedValidityDays }),
   };
 
   const response = await fetch(
     `${auth.baseUrl}/subscriptions/${encodeURIComponent(id)}`,
     {
-      method: "PUT",
+      method: "PATCH",
       headers: {
         Authorization: `Bearer ${auth.token}`,
         "Content-Type": "application/json",
