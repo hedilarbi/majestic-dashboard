@@ -272,7 +272,12 @@ export default async function StatisticsPage({ searchParams }) {
         const selectedContent = buildSelectedView(statistics, selectedView);
 
         if (selectedContent.type === "table") {
-          return <SessionStatsTable rows={statistics.sessionRows} />;
+          return (
+            <SessionStatsTable
+              rows={statistics.sessionRows}
+              pricingColumns={statistics.pricingColumns}
+            />
+          );
         }
 
         return (

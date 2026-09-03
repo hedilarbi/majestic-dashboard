@@ -8,7 +8,10 @@ import ConfirmModal from "@/components/ui/confirm-modal";
 import Toast from "@/components/ui/toast";
 import { Icon } from "@/components/ui/icons";
 import { useToast } from "@/hooks/use-toast";
-import { BLOG_CONTENT_TYPES } from "@/lib/blogue/constants";
+import {
+  BLOG_CONTENT_TYPES,
+  OPTION_BASED_QUESTION_TYPES,
+} from "@/lib/blogue/constants";
 import {
   createEmptyBlogFormState,
   normalizeBlogContent,
@@ -45,6 +48,63 @@ const hasRichTextContent = (value) =>
     .replace(/&nbsp;/g, "")
     .replace(/<[^>]+>/g, "")
     .trim().length > 0;
+
+const MAX_UPLOAD_BYTES = 18 * 1024 * 1024;
+
+const formatFileSize = (bytes) => {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0 Mo";
+  }
+
+  return `${(value / (1024 * 1024)).toFixed(1).replace(".", ",")} Mo`;
+};
+
+const getSelectedUploadFiles = (state) =>
+  [
+    state?.imageFile,
+    state?.thumbnailFile,
+    ...(Array.isArray(state?.imageFiles) ? state.imageFiles : []),
+  ].filter((file) => file && Number.isFinite(Number(file.size)));
+
+const validateUploadSize = (state) => {
+  const files = getSelectedUploadFiles(state);
+  const totalSize = files.reduce((sum, file) => sum + Number(file.size || 0), 0);
+
+  if (totalSize > MAX_UPLOAD_BYTES) {
+    return `Les images sélectionnées pèsent ${formatFileSize(totalSize)}. Limite maximum: ${formatFileSize(MAX_UPLOAD_BYTES)}.`;
+  }
+
+  return "";
+};
+
+const validateQuestions = (questions = []) => {
+  if (!Array.isArray(questions) || !questions.length) {
+    return "Ajoutez au moins une question.";
+  }
+
+  for (let index = 0; index < questions.length; index += 1) {
+    const question = questions[index] || {};
+    const label = String(question.label || "").trim();
+    const type = String(question.type || "").trim();
+
+    if (!label) {
+      return `Le libellé de la question ${index + 1} est obligatoire.`;
+    }
+
+    if (OPTION_BASED_QUESTION_TYPES.has(type)) {
+      const options = (Array.isArray(question.options) ? question.options : [])
+        .map((option) => String(option || "").trim())
+        .filter(Boolean);
+
+      if (options.length < 2) {
+        return `La question ${index + 1} doit contenir au moins deux options.`;
+      }
+    }
+  }
+
+  return "";
+};
 
 const buildFormStateFromItem = (type, item) => ({
   ...createEmptyBlogFormState(type),
@@ -279,6 +339,11 @@ export default function BlogContentManager({
       return "Le titre est obligatoire.";
     }
 
+    const uploadError = validateUploadSize(formState);
+    if (uploadError) {
+      return uploadError;
+    }
+
     if (type === "article") {
       if (!formState.imageFile && !formState.image) {
         return "Ajoutez l'image principale de l'article.";
@@ -300,9 +365,7 @@ export default function BlogContentManager({
     }
 
     if (type === "form") {
-      if (!Array.isArray(formState.questions) || !formState.questions.length) {
-        return "Ajoutez au moins une question.";
-      }
+      return validateQuestions(formState.questions);
     }
 
     return "";
