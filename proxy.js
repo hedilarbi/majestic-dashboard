@@ -1,5 +1,24 @@
 import { NextResponse } from "next/server";
+function redirectTo(request, pathname) {
+  const url = request.nextUrl.clone();
 
+  const forwardedHost =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host");
+
+  const forwardedProto =
+    request.headers.get("x-forwarded-proto") || "https";
+
+  if (forwardedHost) {
+    url.host = forwardedHost.split(",")[0].trim();
+  }
+
+  url.protocol = `${forwardedProto.split(",")[0].trim()}:`;
+  url.pathname = pathname;
+  url.search = "";
+
+  return redirectTo(request, "/connexion");
+}
 export default function proxy(request) {
   const token = request.cookies.get("auth_token")?.value;
   const role = request.cookies.get("user_role")?.value;
@@ -15,31 +34,23 @@ export default function proxy(request) {
 
   if (isConnexion) {
     if (token && isDashboardRole) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/";
-      url.search = "";
-      return NextResponse.redirect(url);
+
+      return redirectTo(request, "/");
     }
 
     if (token && role === "ticket_office") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/guichet";
-      url.search = "";
-      return NextResponse.redirect(url);
+
+      return redirectTo(request, "/guichet");
     }
 
     if (token && role === "blog_manager") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/blogue";
-      url.search = "";
-      return NextResponse.redirect(url);
+
+      return redirectTo(request, "/blogue");
     }
 
     if (token && isCashierRole) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/caissier";
-      url.search = "";
-      return NextResponse.redirect(url);
+
+      return redirectTo(request, "/caissier");
     }
 
     return NextResponse.next();
@@ -47,10 +58,7 @@ export default function proxy(request) {
 
   if (isGuichet) {
     if (!token || role !== "ticket_office") {
-      const url = request.nextUrl.clone();
-      url.pathname = isDashboardRole ? "/" : "/connexion";
-      url.search = "";
-      return NextResponse.redirect(url);
+      return redirectTo(request, isDashboardRole ? "/" : "/connexion");
     }
 
     return NextResponse.next();
@@ -65,9 +73,9 @@ export default function proxy(request) {
           ? "/guichet"
           : isCashierRole
             ? "/caissier"
-          : "/connexion";
+            : "/connexion";
       url.search = "";
-      return NextResponse.redirect(url);
+      return redirectTo(request, url);
     }
 
     return NextResponse.next();
@@ -84,7 +92,7 @@ export default function proxy(request) {
             ? "/blogue"
             : "/connexion";
       url.search = "";
-      return NextResponse.redirect(url);
+      return redirectTo(request, url);
     }
 
     return NextResponse.next();
@@ -99,9 +107,9 @@ export default function proxy(request) {
           ? "/blogue"
           : isCashierRole
             ? "/caissier"
-          : "/connexion";
+            : "/connexion";
     url.search = "";
-    return NextResponse.redirect(url);
+    return redirectTo(request, url);
   }
 
   return NextResponse.next();
