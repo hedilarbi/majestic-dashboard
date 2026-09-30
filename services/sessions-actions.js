@@ -30,6 +30,7 @@ export async function createSessions(payload) {
     overrides,
     pricingOverrides,
     pricingLimits,
+    disabledPricingIds,
   } = payload || {};
 
   if (!eventId) {
@@ -69,6 +70,7 @@ export async function createSessions(payload) {
     overrides: normalizeArray(overrides),
     pricingOverrides: normalizeArray(pricingOverrides),
     pricingLimits: normalizeArray(pricingLimits),
+    disabledPricingIds: normalizeArray(disabledPricingIds),
   };
 
   let created = 0;

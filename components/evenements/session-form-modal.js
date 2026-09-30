@@ -99,11 +99,17 @@ const buildPricingState = (pricing) => {
 
 const buildPricingStateFromSession = (pricing, session) => {
   const base = buildPricingState(pricing);
+  const disabledIds = new Set(
+    (Array.isArray(session?.disabledPricingIds) ? session.disabledPricingIds : [])
+      .map((item) => item?._id ?? item)
+      .filter(Boolean)
+      .map(String),
+  );
   const limits = Array.isArray(session?.pricingLimits)
     ? session.pricingLimits
     : [];
 
-  if (!limits.length) {
+  if (!limits.length && !disabledIds.size) {
     return base;
   }
 
@@ -157,7 +163,13 @@ const buildPricingStateFromSession = (pricing, session) => {
     matchedCount += 1;
   });
 
-  if (matchedCount === 0) {
+  disabledIds.forEach((id) => {
+    if (next[id]) {
+      next[id] = { ...next[id], enabled: false };
+    }
+  });
+
+  if (matchedCount === 0 && !disabledIds.size) {
     return base;
   }
 
@@ -594,9 +606,11 @@ export default function SessionFormModal({
       }));
 
     const pricingLimits = [];
+    const disabledPricingIds = [];
     for (const item of pricing || []) {
       const state = pricingState[item.id];
       if (!state || !state.enabled) {
+        if (item?.id) disabledPricingIds.push(item.id);
         continue;
       }
 
@@ -648,6 +662,7 @@ export default function SessionFormModal({
               overrides,
               pricingOverrides,
               pricingLimits,
+              disabledPricingIds,
               sessionType: selectedSessionType,
             },
             targetEvent.id
@@ -663,6 +678,7 @@ export default function SessionFormModal({
             overrides,
             pricingOverrides,
             pricingLimits,
+            disabledPricingIds,
             sessionType: selectedSessionType,
           });
 
