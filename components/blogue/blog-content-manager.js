@@ -306,6 +306,7 @@ export default function BlogContentManager({
 
     if (type === "trailer") {
       payload.set("videoUrl", formState.videoUrl.trim());
+      payload.set("contentHtml", formState.contentHtml || "");
 
       if (formState.thumbnailFile) {
         payload.set("thumbnail", formState.thumbnailFile);
@@ -357,6 +358,10 @@ export default function BlogContentManager({
     if (type === "trailer") {
       if (!formState.videoUrl.trim()) {
         return "L'URL video est obligatoire.";
+      }
+
+      if (!hasRichTextContent(formState.contentHtml)) {
+        return "La description de la vidéo est obligatoire.";
       }
 
       if (!formState.thumbnailFile && !formState.thumbnail) {

@@ -226,6 +226,17 @@ export default function BlogContentFormModal({
 
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Description
+                </label>
+                <RichTextEditor
+                  value={formState.contentHtml}
+                  onChange={onContentHtmlChange}
+                  placeholder="Rédigez la description de la vidéo avec mise en forme."
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-slate-700">
                   Thumbnail
                 </label>
                 <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 transition hover:border-primary/30 hover:bg-primary/5">
