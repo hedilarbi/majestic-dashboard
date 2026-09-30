@@ -54,6 +54,15 @@ const buildFormData = ({
     return { ok: false, message: "Veuillez sélectionner un événement." };
   }
 
+  formData.append(
+    "defaultMovieBanner",
+    formState.bannerRole === "defaultMovie" ? "true" : "false",
+  );
+  formData.append(
+    "defaultShowBanner",
+    formState.bannerRole === "defaultShow" ? "true" : "false",
+  );
+
   if (includeOrderActive) {
     if (formState.order) {
       formData.append("order", String(formState.order));
@@ -97,6 +106,7 @@ export default function EcranAccueilClient({
     order: "",
     active: true,
     eventId: "",
+    bannerRole: "slide",
   });
 
   useEffect(() => {
@@ -142,6 +152,7 @@ export default function EcranAccueilClient({
       order: "",
       active: true,
       eventId: "",
+      bannerRole: "slide",
     });
     setPosterFile(null);
     setPosterPreview("");
@@ -163,6 +174,11 @@ export default function EcranAccueilClient({
       order: Number.isFinite(item.order) ? String(item.order) : "",
       active: item.active !== false,
       eventId,
+      bannerRole: item.defaultMovieBanner
+        ? "defaultMovie"
+        : item.defaultShowBanner
+          ? "defaultShow"
+          : "slide",
     });
     setPosterFile(null);
     setPosterPreview(item.poster || "");
@@ -200,7 +216,7 @@ export default function EcranAccueilClient({
       formState,
       posterFile,
       requirePoster: true,
-      requireEvent: true,
+      requireEvent: formState.bannerRole === "slide",
       includeOrderActive: false,
     });
 
@@ -534,11 +550,15 @@ export default function EcranAccueilClient({
                 <tbody className="divide-y divide-slate-200 text-slate-600">
                   {sortedHero.map((item) => {
                     const eventName =
-                      item.eventName ||
-                      eventLookup[item.eventId]?.name ||
-                      (item.eventId
-                        ? `#${String(item.eventId).slice(-6).toUpperCase()}`
-                        : "-");
+                      item.defaultMovieBanner
+                        ? "Bannière par défaut — Films"
+                        : item.defaultShowBanner
+                          ? "Bannière par défaut — Spectacles"
+                          : item.eventName ||
+                            eventLookup[item.eventId]?.name ||
+                            (item.eventId
+                              ? `#${String(item.eventId).slice(-6).toUpperCase()}`
+                              : "-");
                     const isDragOver = dragOverId === item.id;
                     const isDragging = draggingId === item.id;
 
@@ -644,6 +664,8 @@ export default function EcranAccueilClient({
                               checked={item.movieAffiche === true}
                               onChange={() => handleToggleMovieAffiche(item)}
                               disabled={
+                                item.defaultMovieBanner ||
+                                item.defaultShowBanner ||
                                 !permissions.canUpdate ||
                                 isSwapping ||
                                 afficheUpdatingId === item.id
@@ -660,6 +682,8 @@ export default function EcranAccueilClient({
                               checked={item.showAffiche === true}
                               onChange={() => handleToggleShowAffiche(item)}
                               disabled={
+                                item.defaultMovieBanner ||
+                                item.defaultShowBanner ||
                                 !permissions.canUpdate ||
                                 isSwapping ||
                                 afficheUpdatingId === item.id
@@ -770,6 +794,26 @@ export default function EcranAccueilClient({
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Utilisation de la bannière
+                </label>
+                <select
+                  name="bannerRole"
+                  value={formState.bannerRole}
+                  onChange={handleInputChange}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  <option value="slide">Slide liée à un événement</option>
+                  <option value="defaultMovie">Bannière par défaut — Films</option>
+                  <option value="defaultShow">Bannière par défaut — Spectacles</option>
+                </select>
+                <p className="text-xs text-slate-500">
+                  Les bannières par défaut sont réservées aux pages événements et ne figurent pas dans l’accueil.
+                </p>
+              </div>
+
+              {formState.bannerRole === "slide" ? (
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">
@@ -795,6 +839,7 @@ export default function EcranAccueilClient({
                   </div>
                 </div>
               </div>
+              ) : null}
 
               {formError ? (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -892,6 +937,23 @@ export default function EcranAccueilClient({
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Utilisation de la bannière
+                </label>
+                <select
+                  name="bannerRole"
+                  value={formState.bannerRole}
+                  onChange={handleInputChange}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  <option value="slide">Slide liée à un événement</option>
+                  <option value="defaultMovie">Bannière par défaut — Films</option>
+                  <option value="defaultShow">Bannière par défaut — Spectacles</option>
+                </select>
+              </div>
+
+              {formState.bannerRole === "slide" ? (
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-700">
@@ -917,6 +979,7 @@ export default function EcranAccueilClient({
                   </div>
                 </div>
               </div>
+              ) : null}
 
               {formError ? (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
