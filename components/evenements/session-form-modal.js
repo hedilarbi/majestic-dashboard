@@ -97,6 +97,20 @@ const buildPricingState = (pricing) => {
   }, {});
 };
 
+const buildNewSessionPricingState = (pricing) => {
+  const state = buildPricingState(pricing);
+
+  for (const item of pricing || []) {
+    if (!item?.id || !/\bvip\b/i.test(String(item.name || ""))) {
+      continue;
+    }
+
+    state[item.id] = { ...state[item.id], enabled: false };
+  }
+
+  return state;
+};
+
 const buildPricingStateFromSession = (pricing, session) => {
   const base = buildPricingState(pricing);
   const disabledIds = new Set(
@@ -396,7 +410,7 @@ export default function SessionFormModal({
   const [pricingState, setPricingState] = useState(() =>
     isEditing
       ? buildPricingStateFromSession(pricing, session)
-      : buildPricingState(pricing)
+      : buildNewSessionPricingState(pricing)
   );
   const [roomLayoutState, setRoomLayoutState] = useState(() => {
     if (!rooms?.length) {
