@@ -150,6 +150,17 @@ body {
     padding: 0 !important;
   }
 
+  /* Print view mounted directly in <body>: drop the app layout (h-screen +
+     overflow hidden clips everything to one page) and keep the tickets in
+     normal flow so each one is its own page. */
+  body:has(> .guichet-print-portal) > :not(.guichet-print-portal) {
+    display: none !important;
+  }
+
+  .guichet-print-root.guichet-print-portal {
+    position: static !important;
+  }
+
   .guichet-print-root > :not(.ticket-print-grid) {
     display: none !important;
   }

@@ -3,9 +3,12 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { io } from "socket.io-client";
 
 import { Icon } from "@/components/ui/icons";
 import { formatPrice } from "@/lib/configurations/formatters";
+import { resolveSocketUrl } from "@/lib/guichet/api-client";
 const buildNormalizedSeatKey = (row, col) => {
   const normalizedRow = String(row ?? "").trim();
   const numericCol = Number(col);
@@ -160,6 +163,66 @@ const buildQrImageSrc = (ticket) => {
   )}`;
 };
 
+const PRINT_IMAGE_TIMEOUT_MS = 5_000;
+const PRINT_CANCEL_THRESHOLD_MS = 500;
+const PRINT_FALLBACK_MS = 30_000;
+
+const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+// Make sure the logo and QR code are loaded before the print snapshot is taken.
+const waitForImages = (container) => {
+  const pending = Array.from(container?.querySelectorAll("img") || []).filter(
+    (img) => !img.complete
+  );
+  if (!pending.length) {
+    return Promise.resolve();
+  }
+
+  return Promise.race([
+  Promise.all(
+    pending.map(
+      (img) =>
+      new Promise((resolve) => {
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
+      })
+    )
+  ),
+  wait(PRINT_IMAGE_TIMEOUT_MS)]
+  );
+};
+
+// Opens the print dialog and resolves with `true` when it was likely cancelled.
+// The afterprint listener is registered before window.print() because Chrome
+// fires afterprint synchronously, before window.print() returns.
+const printDocument = () =>
+new Promise((resolve) => {
+  let settled = false;
+  let fallbackTimer = null;
+  const startedAt = Date.now();
+
+  const settle = (cancelled) => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    window.clearTimeout(fallbackTimer);
+    window.removeEventListener("afterprint", handleAfterPrint);
+    resolve(cancelled);
+  };
+
+  // afterprint fires whether the user printed OR cancelled the dialog.
+  // If the dialog was open for < 500 ms it was likely cancelled, not printed.
+  const handleAfterPrint = () => {
+    settle(Date.now() - startedAt < PRINT_CANCEL_THRESHOLD_MS);
+  };
+
+  window.addEventListener("afterprint", handleAfterPrint);
+  // Fallback: if afterprint never fires (some browsers), recover after 30s
+  fallbackTimer = window.setTimeout(() => settle(true), PRINT_FALLBACK_MS);
+  window.print();
+});
+
 function TicketPrintCard({ ticket, booking }) {
   const bookingNumber = booking?.bookingNumber || "";
   const session = booking?.session || {};
@@ -179,7 +242,7 @@ function TicketPrintCard({ ticket, booking }) {
           width={260}
           height={82}
           className="h-full w-auto object-contain"
-          priority={false} />
+          loading="eager" />
 
       </div>
 
@@ -233,7 +296,7 @@ function TicketPrintInterface({ booking, onPrint, isLoading, isPrinting, isPrint
   const isDisabled = isLoading || tickets.length === 0 || isPrinting;
 
   return (
-    <section className="guichet-print-root lg:col-span-8 space-y-5">
+    <section className="lg:col-span-8 space-y-5">
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
         Vente confirmée. Les billets sont prêts à être imprimés.
       </div>
@@ -330,6 +393,11 @@ export default function GuichetCheckoutClient({
   });
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [subscriptionCodeInput, setSubscriptionCodeInput] = useState("");
+  const [subscriptionScanState, setSubscriptionScanState] = useState({
+    status: "connecting",
+    result: null,
+    message: "Connexion au scanner...",
+  });
   const [promoCodeInput, setPromoCodeInput] = useState("");
   const [promoState, setPromoState] = useState({
     status: "idle",
@@ -338,9 +406,7 @@ export default function GuichetCheckoutClient({
     pricing: null
   });
   const promoValidationContextRef = useRef({ subtotal: 0, seatsCount: 0 });
-  const printRedirectHandledRef = useRef(false);
-  const printDialogOpenRef = useRef(false);
-  const printFallbackTimerRef = useRef(null);
+  const printRootRef = useRef(null);
   const [printBooking, setPrintBooking] = useState(null);
   const [isLoadingPrintBooking, setIsLoadingPrintBooking] = useState(false);
   // "idle" | "printing" | "cancelled" | "done"
@@ -348,6 +414,81 @@ export default function GuichetCheckoutClient({
   const isPrinting = printState === "printing";
   const isPrintCancelled = printState === "cancelled";
   const bookingForPrint = printBooking || submitState.booking || null;
+
+  useEffect(() => {
+    let socket;
+    let active = true;
+    let channel = "";
+
+    const connectScanner = async () => {
+      try {
+        const response = await fetch("/api/guichet/subscription-scan/channel", {
+          cache: "no-store",
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data?.channel) {
+          throw new Error(data?.message || "Canal scanner indisponible.");
+        }
+
+        channel = data.channel;
+        socket = io(resolveSocketUrl(), {
+          transports: ["polling", "websocket"],
+        });
+
+        socket.on("connect", () => {
+          socket.emit("join-subscription-scan-channel", { channel });
+          if (active) {
+            setSubscriptionScanState((current) => ({
+              ...current,
+              status: "listening",
+              message: "En attente du scan d'un abonnement...",
+            }));
+          }
+        });
+
+        socket.on("subscription-scanned", (result) => {
+          if (!active || !result) return;
+          setSubscriptionScanState({
+            status: result.isValid ? "received" : "invalid",
+            result,
+            message: result.isValid
+              ? "Abonnement reçu depuis Majestic Scanner."
+              : result.invalidReason || "Abonnement invalide.",
+          });
+        });
+
+        socket.on("connect_error", () => {
+          if (active) {
+            setSubscriptionScanState((current) => ({
+              ...current,
+              status: "error",
+              message: "Connexion au scanner interrompue.",
+            }));
+          }
+        });
+      } catch (error) {
+        if (active) {
+          setSubscriptionScanState({
+            status: "error",
+            result: null,
+            message:
+              error?.message || "Impossible d'initialiser le scanner.",
+          });
+        }
+      }
+    };
+
+    connectScanner();
+    return () => {
+      active = false;
+      if (socket) {
+        if (channel) {
+          socket.emit("leave-subscription-scan-channel", { channel });
+        }
+        socket.disconnect();
+      }
+    };
+  }, []);
 
   const loadBookingForPrint = useCallback(async (bookingId) => {
     if (!bookingId) {
@@ -388,92 +529,39 @@ export default function GuichetCheckoutClient({
       return;
     }
 
-    // Reset cancelled state before retrying
-    if (printState === "cancelled") {
-      setPrintState("idle");
-    }
-
-    printRedirectHandledRef.current = false;
-    printDialogOpenRef.current = true;
     setPrintState("printing");
-    window.print();
+    await waitForImages(printRootRef.current);
 
-    // Fallback: if afterprint never fires (some browsers), recover after 30s
-    const fallbackTimer = setTimeout(() => {
-      setPrintState((prev) => (prev === "printing" ? "cancelled" : prev));
-    }, 30_000);
+    // One print job, one page per ticket: the thermal printer driver must be
+    // set to cut after each page so every ticket comes out separately.
+    const cancelled = await printDocument();
 
-    // Store the timer so afterprint can clear it
-    printFallbackTimerRef.current = fallbackTimer;
-  }, [isPrinting, printState]);
-
-  useEffect(() => {
-    if (printState !== "printing" || typeof window === "undefined") {
-      return undefined;
+    if (cancelled) {
+      // User closed the dialog without printing — log cancellation and unlock the button
+      if (bookingForPrint?.id) {
+        fetch(`/api/guichet/bookings/${bookingForPrint.id}/print-cancelled`, {
+          method: "POST"
+        }).catch(() => {
+          // Non-blocking — do not prevent UI from recovering
+        });
+      }
+      setPrintState("cancelled");
+      return;
     }
 
-    // beforeprint fires when the dialog opens
-    const handleBeforePrint = () => {
-      printDialogOpenRef.current = true;
-    };
-
-    // afterprint fires whether the user printed OR cancelled the dialog
-    // We use a short timeout heuristic: if the dialog was open for < 500 ms
-    // it was likely cancelled, not printed. Most real printers take longer.
-    let dialogOpenedAt = Date.now();
-    const handleAfterPrint = () => {
-      // Clear the fallback timer — afterprint fired normally
-      if (printFallbackTimerRef.current) {
-        clearTimeout(printFallbackTimerRef.current);
-        printFallbackTimerRef.current = null;
+    if (bookingForPrint?.id) {
+      try {
+        await fetch(`/api/guichet/bookings/${bookingForPrint.id}/print`, {
+          method: "POST"
+        });
+      } catch (_error) {
+        // Do not block navigation if the audit log request fails.
       }
+    }
 
-      const elapsed = Date.now() - dialogOpenedAt;
-      const likelyCancelled = elapsed < 500;
-
-      if (printRedirectHandledRef.current) {
-        return;
-      }
-
-      if (likelyCancelled) {
-        // User closed the dialog without printing — log cancellation and unlock the button
-        if (bookingForPrint?.id) {
-          fetch(`/api/guichet/bookings/${bookingForPrint.id}/print-cancelled`, {
-            method: "POST",
-          }).catch(() => {
-            // Non-blocking — do not prevent UI from recovering
-          });
-        }
-        setPrintState("cancelled");
-      } else {
-        // Actual print completed
-        printRedirectHandledRef.current = true;
-        void (async () => {
-          if (bookingForPrint?.id) {
-            try {
-              await fetch(`/api/guichet/bookings/${bookingForPrint.id}/print`, {
-                method: "POST",
-              });
-            } catch (_error) {
-              // Do not block navigation if the audit log request fails.
-            }
-          }
-
-          setPrintState("done");
-          router.replace("/guichet");
-        })();
-      }
-    };
-
-    dialogOpenedAt = Date.now();
-    window.addEventListener("beforeprint", handleBeforePrint);
-    window.addEventListener("afterprint", handleAfterPrint);
-
-    return () => {
-      window.removeEventListener("beforeprint", handleBeforePrint);
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-  }, [bookingForPrint?.id, printState, router]);
+    setPrintState("done");
+    router.replace("/guichet");
+  }, [bookingForPrint?.id, isPrinting, router]);
 
   const overrideMap = useMemo(() => {
     const map = new Map();
@@ -899,6 +987,10 @@ export default function GuichetCheckoutClient({
 
   const shouldShowPrintInterface = submitState.status === "success";
   if (shouldShowPrintInterface) {
+    const printTickets = Array.isArray(bookingForPrint?.tickets) ?
+    bookingForPrint.tickets :
+    [];
+
     return (
       <>
         <TicketPrintInterface
@@ -908,6 +1000,27 @@ export default function GuichetCheckoutClient({
           isPrinting={isPrinting}
           isPrintCancelled={isPrintCancelled} />
 
+        {/* Hidden print view, mounted at <body> level so each ticket prints
+            as its own page (see guichet-print-portal in globals.css) */}
+        {printTickets.length > 0 && typeof document !== "undefined" ?
+        createPortal(
+          <div
+            ref={printRootRef}
+            className="guichet-print-root guichet-print-portal hidden">
+
+              <div className="ticket-print-grid">
+                {printTickets.map((ticket) =>
+              <TicketPrintCard
+                key={ticket.id || ticket.code}
+                ticket={ticket}
+                booking={bookingForPrint} />
+
+              )}
+              </div>
+            </div>,
+          document.body
+        ) :
+        null}
       </>);
 
   }
@@ -1042,6 +1155,58 @@ export default function GuichetCheckoutClient({
       null}
 
       <div className="rounded-2xl border border-slate-100 bg-white px-6 py-5">
+        <div
+          className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
+            subscriptionScanState.status === "received"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : subscriptionScanState.status === "invalid" ||
+                  subscriptionScanState.status === "error"
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-blue-200 bg-blue-50 text-blue-700"
+          }`}
+        >
+          <p className="font-semibold">Majestic Scanner</p>
+          <p className="mt-1 text-xs">{subscriptionScanState.message}</p>
+          {subscriptionScanState.result ? (
+            <div className="mt-3">
+              <div className="grid gap-1 text-xs sm:grid-cols-2">
+                <span>
+                  Offre : {subscriptionScanState.result.subscriptionName}
+                </span>
+                <span>
+                  Client : {subscriptionScanState.result.customerName || "-"}
+                </span>
+                <span>
+                  Crédits : {subscriptionScanState.result.remainingCredits}
+                </span>
+                <span>
+                  Code : {subscriptionScanState.result.subscriptionCode}
+                </span>
+              </div>
+              {subscriptionScanState.result.isValid ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubscriptionCodeInput(
+                      subscriptionScanState.result.subscriptionCode,
+                    );
+                    setPromoCodeInput("");
+                    setPromoState({
+                      status: "idle",
+                      message: "",
+                      promo: null,
+                      pricing: null,
+                    });
+                  }}
+                  disabled={isSubmitting || isSuccess}
+                  className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Utiliser cet abonnement
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
         <label className="mt-3 flex flex-col gap-2">
           <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
             Code abonnement
